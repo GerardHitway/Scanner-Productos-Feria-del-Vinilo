@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Escáner de stock</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+  :root{
+    --bg:            #14100e;
+    --surface:       #201a16;
+    --surface-2:     #2a221c;
+    --line:          #3a3128;
+    --text:          #f2e9de;
+    --text-muted:    #a79684;
+    --accent:        #c9622a;   /* naranja funda de disco */
+    --gold:          #d4af37;   /* precio */
+    --error:         #c0453a;
+    --radius:        18px;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    padding:16px 20px 12px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    border-bottom:1px solid var(--line);
+    flex-shrink:0;
+    z-index:5;
+    background:var(--bg);
+  }
+  header .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+  }
+  header h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:20px;
+    margin:2px 0 0;
+    letter-spacing:-.01em;
+  }
+  #status-dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--text-muted);
+    flex-shrink:0;
+    transition:background .3s;
+  }
+  #status-dot.ready{ background:#5fae7a; }
+  #status-dot.error{ background:var(--error); }
+  .status-wrap{ display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted); }
+
+  /* ---------- Scanner viewport ---------- */
+  #scanner-wrap{
+    position:relative;
+    flex:1;
+    min-height:0;
+    background:#000;
+  }
+  #reader{ width:100%; height:100%; }
+  #reader video{ width:100% !important; height:100% !important; object-fit:cover; }
+  /* hide the library's default chrome, we draw our own */
+  #reader__dashboard, #reader__header_message, #reader__filescan_input, #reader__camera_selection{ display:none !important; }
+  #reader__scan_region{ border:none !important; }
+  #reader__scan_region img{ display:none !important; }
+
+  .viewfinder{
+    position:absolute; inset:0;
+    pointer-events:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .viewfinder .frame{
+    width:78%;
+    max-width:420px;
+    aspect-ratio:16/9;
+    position:relative;
+  }
+  .viewfinder .corner{
+    position:absolute;
+    width:28px; height:28px;
+    border:3px solid var(--accent);
+  }
+  .viewfinder .corner.tl{ top:0; left:0; border-right:none; border-bottom:none; border-top-left-radius:8px; }
+  .viewfinder .corner.tr{ top:0; right:0; border-left:none; border-bottom:none; border-top-right-radius:8px; }
+  .viewfinder .corner.bl{ bottom:0; left:0; border-right:none; border-top:none; border-bottom-left-radius:8px; }
+  .viewfinder .corner.br{ bottom:0; right:0; border-left:none; border-top:none; border-bottom-right-radius:8px; }
+  .viewfinder .scanline{
+    position:absolute;
+    left:6%; right:6%;
+    height:2px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    box-shadow:0 0 8px 1px var(--accent);
+    animation:sweep 2.2s ease-in-out infinite;
+  }
+  @keyframes sweep{
+    0%,100%{ top:8%; opacity:.9; }
+    50%{ top:92%; opacity:.5; }
+  }
+  .hint{
+    position:absolute;
+    bottom:22px; left:0; right:0;
+    text-align:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    letter-spacing:.06em;
+    color:var(--text-muted);
+    text-shadow:0 1px 4px rgba(0,0,0,.8);
+  }
+
+  #camera-error{
+    position:absolute; inset:0;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    padding:32px;
+    text-align:center;
+    background:var(--bg);
+  }
+  #camera-error.show{ display:flex; }
+  #camera-error p{ color:var(--text-muted); font-size:14px; line-height:1.5; margin:0; }
+  #camera-error button{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:12px 22px;
+    border-radius:999px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+  }
+
+  /* ---------- Result ticket (bottom sheet) ---------- */
+  #ticket-scrim{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.55);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+    z-index:8;
+  }
+  #ticket-scrim.show{ opacity:1; pointer-events:auto; }
+
+  #ticket{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:9;
+    background:var(--surface);
+    border-top-left-radius:24px;
+    border-top-right-radius:24px;
+    padding:10px 22px calc(26px + env(safe-area-inset-bottom));
+    transform:translateY(100%);
+    transition:transform .32s cubic-bezier(.2,.9,.25,1);
+    box-shadow:0 -12px 40px rgba(0,0,0,.5);
+    max-height:78vh;
+    overflow-y:auto;
+  }
+  #ticket.show{ transform:translateY(0); }
+
+  /* perforated ticket edge */
+  #ticket::before{
+    content:"";
+    display:block;
+    width:36px; height:4px;
+    background:var(--line);
+    border-radius:3px;
+    margin:0 auto 18px;
+  }
+
+  .ticket-row-top{
+    display:flex;
+    gap:16px;
+    align-items:flex-start;
+  }
+  .ticket-img{
+    width:92px; height:92px;
+    border-radius:10px;
+    object-fit:cover;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    flex-shrink:0;
+  }
+  .ticket-img.placeholder{
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-muted);
+    font-size:10px;
+    font-family:'JetBrains Mono',monospace;
+    text-align:center;
+    padding:6px;
+  }
+  .ticket-main{ min-width:0; flex:1; }
+  .ticket-sku{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--accent);
+    letter-spacing:.05em;
+  }
+  .ticket-title{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:19px;
+    line-height:1.2;
+    margin:4px 0 2px;
+  }
+  .ticket-artist{
+    color:var(--text-muted);
+    font-size:14px;
+  }
+
+  .ticket-divider{
+    border:none;
+    border-top:1px dashed var(--line);
+    margin:18px 0 14px;
+  }
+
+  .price-grid{
+    display:flex;
+    gap:12px;
+  }
+  .price-card{
+    flex:1;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 14px;
+  }
+  .price-card .label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+  }
+  .price-card .value{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:20px;
+    color:var(--gold);
+    margin-top:4px;
+  }
+  .price-card.club .value{ color:var(--accent); }
+
+  #ticket-close{
+    width:100%;
+    margin-top:20px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:13px;
+    border-radius:12px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+  }
+
+  .not-found .ticket-title{ color:var(--error); }
+  .not-found-icon{
+    font-family:'JetBrains Mono',monospace;
+    font-size:34px;
+    color:var(--error);
+    text-align:center;
+    margin-bottom:6px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">Punto de venta</div>
+    <h1>Escanear producto</h1>
+  </div>
+  <div class="status-wrap">
+    <span id="status-dot"></span>
+    <span id="status-text">cargando catálogo…</span>
+  </div>
+</header>
+
+<div id="scanner-wrap">
+  <div id="reader"></div>
+
+  <div class="viewfinder">
+    <div class="frame">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+      <div class="scanline"></div>
+    </div>
+  </div>
+  <div class="hint">apuntá al código de barras</div>
+
+  <div id="camera-error">
+    <p>No pudimos acceder a la cámara.<br>Revisá los permisos del navegador y volvé a intentar.</p>
+    <button onclick="location.reload()">Reintentar</button>
+  </div>
+</div>
+
+<div id="ticket-scrim" onclick="closeTicket()"></div>
+<div id="ticket"></div>
+
+<script>
+  // ======= CONFIGURACIÓN =======
+  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCTJ02RhdYcZqjlrKneeA7IUVq9TT-jhGAVRRY9X6XKIy038KNtfw1Tamao2yMyA/pub?gid=540197870&single=true&output=csv";
+
+  const COLS = {
+    sku: "SKU",
+    artista: "Artista",
+    titulo: "Título",
+    precio: "Precio",
+    precioClub: "Precio Club de lectores",
+    imagen: "Imagen"
+  };
+  // ==============================
+
+  const statusDot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  let catalogIndex = {};
+  let catalogReady = false;
+
+  function normalizeSku(s){
+    return (s || "").toString().trim().toUpperCase();
+  }
+
+  function toDirectImageUrl(url){
+    if(!url) return "";
+    url = url.trim();
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+    if(driveMatch){
+      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+    }
+    const driveIdMatch = url.match(/[?&]id=([^&]+)/);
+    if(driveIdMatch && url.includes('drive.google.com')){
+      return `https://drive.google.com/uc?export=view&id=${driveIdMatch[1]}`;
+    }
+    return url;
+  }
+
+  async function loadCatalog(){
+    statusText.textContent = "cargando catálogo…";
+    statusDot.className = "";
+    try{
+      const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const parsed = Papa.parse(csvText, { header:true, skipEmptyLines:true });
+      catalogIndex = {};
+      parsed.data.forEach(row => {
+        const sku = normalizeSku(row[COLS.sku]);
+        if(sku) catalogIndex[sku] = row;
+      });
+      catalogReady = true;
+      statusDot.className = "ready";
+      statusText.textContent = `catálogo listo · ${Object.keys(catalogIndex).length} productos`;
+    }catch(err){
+      console.error(err);
+      statusDot.className = "error";
+      statusText.textContent = "error al cargar catálogo";
+    }
+  }
+
+  function formatPrice(v){
+    if(v === undefined || v === null || v.toString().trim() === "") return "—";
+    const cleaned = v.toString().replace(/[^\d.,-]/g, '');
+    return cleaned ? `$${cleaned}` : v;
+  }
+
+  function showTicket(row, skuScanned){
+    const ticket = document.getElementById('ticket');
+    const scrim = document.getElementById('ticket-scrim');
+
+    if(!row){
+      ticket.className = "not-found";
+      ticket.innerHTML = `
+        <div class="not-found-icon">✕</div>
+        <div class="ticket-title" style="text-align:center;">SKU no encontrado</div>
+        <div class="ticket-artist" style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; margin-top:6px;">${skuScanned}</div>
+        <button id="ticket-close">Seguir escaneando</button>
+      `;
+    } else {
+      const imgUrl = toDirectImageUrl(row[COLS.imagen]);
+      ticket.className = "";
+      ticket.innerHTML = `
+        <div class="ticket-row-top">
+          ${ imgUrl
+            ? `<img class="ticket-img" src="${imgUrl}" onerror="this.outerHTML='<div class=&quot;ticket-img placeholder&quot;>sin imagen</div>'">`
+            : `<div class="ticket-img placeholder">sin imagen</div>` }
+          <div class="ticket-main">
+            <div class="ticket-sku">${normalizeSku(row[COLS.sku])}</div>
+            <div class="ticket-title">${row[COLS.titulo] || "Sin título"}</div>
+            <div class="ticket-artist">${row[COLS.artista] || ""}</div>
+          </div>
+        </div>
+        <hr class="ticket-divider">
+        <div class="price-grid">
+          <div class="price-card">
+            <div class="label">Precio</div>
+            <div class="value">${formatPrice(row[COLS.precio])}</div>
+          </div>
+          <div class="price-card club">
+            <div class="label">Club de lectores</div>
+            <div class="value">${formatPrice(row[COLS.precioClub])}</div>
+          </div>
+        </div>
+        <button id="ticket-close">Seguir escaneando</button>
+      `;
+    }
+
+    document.getElementById('ticket-close').addEventListener('click', closeTicket);
+    ticket.classList.add('show');
+    scrim.classList.add('show');
+  }
+
+  function closeTicket(){
+    document.getElementById('ticket').classList.remove('show');
+    document.getElementById('ticket-scrim').classList.remove('show');
+    setTimeout(() => { scannerLocked = false; }, 200);
+  }
+
+  // ---------- Scanner ----------
+  let scannerLocked = false;
+
+  function onScanSuccess(decodedText){
+    if(scannerLocked) return;
+    if(!catalogReady){
+      statusText.textContent = "catálogo aún no cargado, esperá…";
+      return;
+    }
+    scannerLocked = true;
+    if(navigator.vibrate) navigator.vibrate(60);
+    const sku = normalizeSku(decodedText);
+    const row = catalogIndex[sku];
+    showTicket(row, sku);
+  }
+
+  function startScanner(){
+    const html5QrCode = new Html5Qrcode("reader", {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.QR_CODE
+      ],
+      verbose:false
+    });
+
+    html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 280, height: 160 } },
+      onScanSuccess,
+      () => {} // ignorar errores de frame-a-frame (no hay código visible)
+    ).catch(err => {
+      console.error(err);
+      document.getElementById('camera-error').classList.add('show');
+    });
+  }
+
+  loadCatalog();
+  startScanner();
+  // refrescar catálogo cada 3 minutos por si cambian precios
+  setInterval(loadCatalog, 3 * 60 * 1000);
+</script>
+
+</body>
+</html>

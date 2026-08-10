@@ -374,8 +374,15 @@
   .cart-item .p{
     font-family:'JetBrains Mono',monospace;
     color:var(--gold);
-    font-size:14px;
+    font-size:13px;
     flex-shrink:0;
+    text-align:right;
+    line-height:1.5;
+  }
+  .cart-item .p .club{
+    color:var(--accent);
+    display:block;
+    font-size:11.5px;
   }
   .cart-item .rm{
     background:none;
@@ -386,15 +393,22 @@
     padding:4px 6px;
     flex-shrink:0;
   }
+
+  .totals-block{
+    margin-top:6px;
+  }
   .cart-total-row{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    padding:16px 0 4px;
+    padding:10px 0;
     font-family:'JetBrains Mono',monospace;
+    border-bottom:1px solid var(--line);
   }
-  .cart-total-row .label{ color:var(--text-muted); font-size:13px; }
-  .cart-total-row .value{ font-size:22px; font-weight:700; color:var(--gold); }
+  .cart-total-row:last-of-type{ border-bottom:none; }
+  .cart-total-row .label{ color:var(--text-muted); font-size:12.5px; }
+  .cart-total-row .value{ font-size:19px; font-weight:700; color:var(--gold); }
+  .cart-total-row.club .value{ color:var(--accent); }
 
   #cart-clear, #cart-close{
     width:100%;
@@ -626,39 +640,56 @@
     cartItems.push({
       sku: normalizeSku(row[COLS.sku]),
       titulo: row[COLS.titulo] || "Sin título",
-      precio: parsePrice(row[COLS.precio])
+      precio: parsePrice(row[COLS.precio]),
+      precioClub: parsePrice(row[COLS.precioClub])
     });
     renderCartBar();
   }
 
   function renderCartBar(){
     const bar = document.getElementById('cart-bar');
-    const total = cartItems.reduce((sum, i) => sum + i.precio, 0);
     document.getElementById('cart-count').textContent =
       `${cartItems.length} producto${cartItems.length === 1 ? '' : 's'}`;
-    document.getElementById('cart-total').textContent = formatCLP(total);
+    document.getElementById('cart-total').textContent = formatCLP(cartTotal(activePriceMode));
     bar.classList.toggle('show', cartItems.length > 0);
   }
 
+  function cartTotal(mode){
+    const key = mode === 'club' ? 'precioClub' : 'precio';
+    return cartItems.reduce((sum, i) => sum + (i[key] || 0), 0);
+  }
+
+  let activePriceMode = 'normal'; // 'normal' | 'club' — qué total manda en la barra inferior
+
   function renderCartSheet(){
     const sheet = document.getElementById('cart-sheet');
-    const total = cartItems.reduce((sum, i) => sum + i.precio, 0);
+    const totalNormal = cartTotal('normal');
+    const totalClub = cartTotal('club');
     const rows = cartItems.map((item, idx) => `
       <div class="cart-item">
         <div class="info">
           <div class="t">${item.titulo}</div>
           <div class="s">${item.sku}</div>
         </div>
-        <div class="p">${formatCLP(item.precio)}</div>
+        <div class="p">
+          ${formatCLP(item.precio)}
+          <span class="club">${formatCLP(item.precioClub)}</span>
+        </div>
         <button class="rm" onclick="removeFromCart(${idx})">×</button>
       </div>
     `).join('');
     sheet.innerHTML = `
       <h2>Productos guardados</h2>
       ${rows || '<p style="color:var(--text-muted); font-size:13px;">Todavía no guardaste ningún producto.</p>'}
-      <div class="cart-total-row">
-        <span class="label">Total</span>
-        <span class="value">${formatCLP(total)}</span>
+      <div class="totals-block">
+        <div class="cart-total-row normal" id="total-row-normal" onclick="setActivePriceMode('normal')" style="cursor:pointer;">
+          <span class="label">Total (Precio normal) ${activePriceMode === 'normal' ? '✓' : ''}</span>
+          <span class="value">${formatCLP(totalNormal)}</span>
+        </div>
+        <div class="cart-total-row club" id="total-row-club" onclick="setActivePriceMode('club')" style="cursor:pointer;">
+          <span class="label">Total (Club de lectores) ${activePriceMode === 'club' ? '✓' : ''}</span>
+          <span class="value">${formatCLP(totalClub)}</span>
+        </div>
       </div>
       <button id="cart-clear">Vaciar lista</button>
       <button id="cart-close">Cerrar</button>
@@ -669,6 +700,12 @@
       renderCartBar();
       renderCartSheet();
     });
+  }
+
+  function setActivePriceMode(mode){
+    activePriceMode = mode;
+    renderCartSheet();
+    renderCartBar();
   }
 
   function removeFromCart(idx){

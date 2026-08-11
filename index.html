@@ -14,16 +14,16 @@
 
 <style>
   :root{
-    --bg:            #14100e;
-    --surface:       #201a16;
-    --surface-2:     #2a221c;
-    --line:          #3a3128;
-    --text:          #f2e9de;
-    --text-muted:    #a79684;
-    --accent:        #c9622a;   /* naranja funda de disco */
-    --gold:          #d4af37;   /* precio */
-    --error:         #c0453a;
-    --radius:        18px;
+    --bg:             #14100e;
+    --surface:        #201a16;
+    --surface-2:      #2a221c;
+    --line:           #3a3128;
+    --text:           #f2e9de;
+    --text-muted:     #a79684;
+    --accent:         #c9622a;   /* naranja funda de disco */
+    --gold:           #d4af37;   /* precio */
+    --error:          #c0453a;
+    --radius:         18px;
   }
 
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -83,7 +83,7 @@
   }
   #reader{ width:100%; height:100%; }
   #reader video{ width:100% !important; height:100% !important; object-fit:cover; }
-/
+
   #reader__dashboard, #reader__header_message, #reader__filescan_input, #reader__camera_selection{ display:none !important; }
   #reader__scan_region{ border:none !important; }
   #reader__scan_region img{ display:none !important; }
@@ -157,25 +157,6 @@
     font-size:14px;
   }
 
-  /* ---------- Selector de cámara (fallback manual iOS) ---------- */
-  #camera-select-wrap{
-    position:absolute;
-    top:12px; left:50%;
-    transform:translateX(-50%);
-    z-index:6;
-    display:none;
-  }
-  #camera-select-wrap.show{ display:block; }
-  #camera-select{
-    background:rgba(20,16,14,.85);
-    color:var(--text);
-    border:1px solid var(--line);
-    border-radius:999px;
-    padding:8px 14px;
-    font-family:'JetBrains Mono',monospace;
-    font-size:11px;
-    max-width:70vw;
-  }
 
   #ticket-scrim{
     position:fixed; inset:0;
@@ -475,10 +456,6 @@
 <div id="scanner-wrap">
   <div id="reader"></div>
 
-  <div id="camera-select-wrap">
-    <select id="camera-select"></select>
-  </div>
-
   <div class="viewfinder">
     <div class="frame">
       <div class="corner tl"></div>
@@ -489,12 +466,6 @@
     </div>
   </div>
   <div class="hint">Apunta al código de barras</div>
-
-  <div id="zoom-wrap" style="display:none; position:absolute; bottom:70px; left:50%; transform:translateX(-50%); z-index:6; gap:8px;">
-    <button class="zoom-btn" data-zoom="1" style="background:rgba(20,16,14,.85); color:#f2e9de; border:1px solid #3a3128; border-radius:999px; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:12px;">1x</button>
-    <button class="zoom-btn" data-zoom="2" style="background:rgba(20,16,14,.85); color:#f2e9de; border:1px solid #3a3128; border-radius:999px; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:12px;">2x</button>
-    <button class="zoom-btn" data-zoom="3" style="background:rgba(20,16,14,.85); color:#f2e9de; border:1px solid #3a3128; border-radius:999px; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:12px;">3x</button>
-  </div>
 
   <div id="camera-error">
     <p>No pudimos acceder a la cámara.<br>Revisa los permisos del navegador y vuelve a intentar.</p>
@@ -762,8 +733,6 @@
 
   // ---------- Scanner ----------
   let scannerLocked = false;
-  let html5QrCode = null;
-  let currentCameraId = null;
 
   function onScanSuccess(decodedText){
     if(scannerLocked) return;
@@ -778,87 +747,8 @@
     showTicket(row, sku);
   }
 
-  const scanConfig = {
-    fps: 8,
-    qrbox: { width: 320, height: 140 }, // más ancho y bajo: se parece a la forma real de un código de barras
-    aspectRatio: 1.777,
-    disableFlip: false
-  };
-
-  function buildVideoConstraints(deviceId){
-    return {
-      deviceId: deviceId ? { exact: deviceId } : undefined,
-      facingMode: deviceId ? undefined : "environment",
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      advanced: [{ focusMode: "continuous" }]
-    };
-  }
-
-  function pickBestBackCamera(devices){
-    const backCams = devices.filter(d => /back|rear|trasera|environment/i.test(d.label));
-    const primary = backCams.find(d => !/ultra ?wide|tele|zoom/i.test(d.label));
-    return primary || backCams[0] || devices[devices.length - 1] || devices[0];
-  }
-
-  // ---------- Zoom digital (ayuda mucho en lentes sin macro, tipo iPhone) ----------
-  function setupZoomControls(){
-    const wrap = document.getElementById('zoom-wrap');
-    try{
-      const track = html5QrCode.getRunningTrackCameraCapabilities
-        ? null
-        : null;
-      const videoEl = document.querySelector('#reader video');
-      if(!videoEl || !videoEl.srcObject) return;
-      const streamTrack = videoEl.srcObject.getVideoTracks()[0];
-      if(!streamTrack) return;
-      const capabilities = streamTrack.getCapabilities ? streamTrack.getCapabilities() : {};
-      if(!capabilities.zoom){
-        wrap.style.display = 'none';
-        return;
-      }
-      wrap.style.display = 'flex';
-      wrap.querySelectorAll('.zoom-btn').forEach(btn => {
-        btn.onclick = () => {
-          const z = parseFloat(btn.dataset.zoom);
-          const clamped = Math.min(Math.max(z, capabilities.zoom.min), capabilities.zoom.max);
-          streamTrack.applyConstraints({ advanced: [{ zoom: clamped }] }).catch(err => console.error(err));
-          wrap.querySelectorAll('.zoom-btn').forEach(b => b.style.opacity = '.55');
-          btn.style.opacity = '1';
-        };
-      });
-      wrap.querySelector('.zoom-btn[data-zoom="1"]').style.opacity = '1';
-    }catch(err){
-      console.error('zoom no soportado', err);
-    }
-  }
-
-  function populateCameraSelect(devices, selectedId){
-    const wrap = document.getElementById('camera-select-wrap');
-    const select = document.getElementById('camera-select');
-    if(devices.length <= 1){
-      wrap.classList.remove('show');
-      return;
-    }
-    select.innerHTML = devices.map(d =>
-      `<option value="${d.id}" ${d.id === selectedId ? 'selected' : ''}>${d.label || d.id}</option>`
-    ).join('');
-    wrap.classList.add('show');
-    select.onchange = () => switchCamera(select.value);
-  }
-
-  function switchCamera(cameraId){
-    if(!html5QrCode || cameraId === currentCameraId) return;
-    html5QrCode.stop().then(() => {
-      currentCameraId = cameraId;
-      return html5QrCode.start(buildVideoConstraints(cameraId), scanConfig, onScanSuccess, () => {});
-    }).then(() => {
-      setTimeout(setupZoomControls, 400);
-    }).catch(err => console.error(err));
-  }
-
   function startScanner(){
-    html5QrCode = new Html5Qrcode("reader", {
+    const html5QrCode = new Html5Qrcode("reader", {
       formatsToSupport: [
         Html5QrcodeSupportedFormats.EAN_13,
         Html5QrcodeSupportedFormats.EAN_8,
@@ -868,34 +758,31 @@
         Html5QrcodeSupportedFormats.CODE_39,
         Html5QrcodeSupportedFormats.QR_CODE
       ],
-      verbose:false
+      verbose: false
     });
 
-    Html5Qrcode.getCameras().then(devices => {
-      if(!devices || devices.length === 0) throw new Error("Sin cámaras disponibles");
+    // Configuración optimizada específicamente para iOS Safari
+    const cameraConfig = { 
+      facingMode: "environment",
+      focusMode: "continuous"
+    };
 
-      const chosen = pickBestBackCamera(devices);
-      currentCameraId = chosen.id;
-      populateCameraSelect(devices, chosen.id);
+    const qrScanConfig = { 
+      fps: 15,
+      // Se elimina qrbox fijo o se establece dinámico para escanear todo el frame del video en WebKit
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true
+      }
+    };
 
-      return html5QrCode.start(buildVideoConstraints(chosen.id), scanConfig, onScanSuccess, () => {});
-    }).then(() => {
-      if(html5QrCode) setTimeout(setupZoomControls, 400);
-    }).catch(err => {
+    html5QrCode.start(
+      cameraConfig,
+      qrScanConfig,
+      onScanSuccess,
+      () => {}
+    ).catch(err => {
       console.error(err);
-      // Fallback: en iOS a veces getCameras() no trae labels hasta que
-      // el usuario ya dio permiso una vez. Probamos con facingMode directo.
-      html5QrCode.start(
-        buildVideoConstraints(null),
-        scanConfig,
-        onScanSuccess,
-        () => {}
-      ).then(() => {
-        setTimeout(setupZoomControls, 400);
-      }).catch(err2 => {
-        console.error(err2);
-        document.getElementById('camera-error').classList.add('show');
-      });
+      document.getElementById('camera-error').classList.add('show');
     });
   }
 

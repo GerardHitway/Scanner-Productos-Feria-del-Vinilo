@@ -74,7 +74,7 @@
   #status-dot.error{ background:var(--error); }
   .status-wrap{ display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted); }
 
-  /* ---------- Scanner viewport ---------- */
+
   #scanner-wrap{
     position:relative;
     flex:1;
@@ -83,7 +83,7 @@
   }
   #reader{ width:100%; height:100%; }
   #reader video{ width:100% !important; height:100% !important; object-fit:cover; }
-  /* hide the library's default chrome, we draw our own */
+/
   #reader__dashboard, #reader__header_message, #reader__filescan_input, #reader__camera_selection{ display:none !important; }
   #reader__scan_region{ border:none !important; }
   #reader__scan_region img{ display:none !important; }
@@ -157,7 +157,7 @@
     font-size:14px;
   }
 
-  /* ---------- Result ticket (bottom sheet) ---------- */
+
   #ticket-scrim{
     position:fixed; inset:0;
     background:rgba(0,0,0,.55);
@@ -184,7 +184,7 @@
   }
   #ticket.show{ transform:translateY(0); }
 
-  /* perforated ticket edge */
+
   #ticket::before{
     content:"";
     display:block;
@@ -478,7 +478,7 @@
 
 <div id="cart-bar" onclick="openCart()">
   <span class="cart-count" id="cart-count">0 productos</span>
-  <span class="cart-total" id="cart-total">$0</span>
+  <span class="cart-total" id="cart-total">Ver Total</span>
 </div>
 <div id="cart-sheet"></div>
 
@@ -650,7 +650,7 @@
     const bar = document.getElementById('cart-bar');
     document.getElementById('cart-count').textContent =
       `${cartItems.length} producto${cartItems.length === 1 ? '' : 's'}`;
-    document.getElementById('cart-total').textContent = formatCLP(cartTotal(activePriceMode));
+    document.getElementById('cart-total').textContent = "Ver Total";
     bar.classList.toggle('show', cartItems.length > 0);
   }
 
@@ -659,7 +659,7 @@
     return cartItems.reduce((sum, i) => sum + (i[key] || 0), 0);
   }
 
-  let activePriceMode = 'normal'; // 'normal' | 'club' — qué total manda en la barra inferior
+  let activePriceMode = 'normal'; 
 
   function renderCartSheet(){
     const sheet = document.getElementById('cart-sheet');

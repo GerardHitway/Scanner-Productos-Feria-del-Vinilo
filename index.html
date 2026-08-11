@@ -1,4 +1,28 @@
 <script>
+  // ======= DEBUG VISIBLE EN PANTALLA (para ver errores sin Mac) =======
+  function showDebugError(msg){
+    let box = document.getElementById('debug-error-box');
+    if(!box){
+      box = document.createElement('div');
+      box.id = 'debug-error-box';
+      box.style.cssText = `
+        position:fixed; top:0; left:0; right:0; z-index:99999;
+        background:#c00; color:#fff; font-family:monospace;
+        font-size:12px; padding:10px; white-space:pre-wrap;
+        max-height:40vh; overflow:auto;
+      `;
+      document.body.appendChild(box);
+    }
+    box.textContent += (box.textContent ? "\n---\n" : "") + msg;
+  }
+  window.addEventListener('error', (e) => {
+    showDebugError("JS ERROR: " + e.message + " (línea " + e.lineno + ")");
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    showDebugError("PROMISE ERROR: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+  // ======================================================================
+
   // ======= CONFIGURACIÓN =======
   const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCTJ02RhdYcZqjlrKneeA7IUVq9TT-jhGAVRRY9X6XKIy038KNtfw1Tamao2yMyA/pub?gid=540197870&single=true&output=csv";
 
@@ -37,8 +61,8 @@
   }
 
   async function loadCatalog(){
-    statusText.textContent = "cargando catálogo…";
-    statusDot.className = "";
+    if(statusText) statusText.textContent = "cargando catálogo…";
+    if(statusDot) statusDot.className = "";
     try{
       const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
       if(!res.ok) throw new Error("HTTP " + res.status);
@@ -50,12 +74,13 @@
         if(sku) catalogIndex[sku] = row;
       });
       catalogReady = true;
-      statusDot.className = "ready";
-      statusText.textContent = "";
+      if(statusDot) statusDot.className = "ready";
+      if(statusText) statusText.textContent = "";
     }catch(err){
       console.error(err);
-      statusDot.className = "error";
-      statusText.textContent = "error al cargar catálogo";
+      showDebugError("Error cargando catálogo: " + err.message);
+      if(statusDot) statusDot.className = "error";
+      if(statusText) statusText.textContent = "error al cargar catálogo";
     }
   }
 
@@ -68,6 +93,7 @@
   function showTicket(row, skuScanned){
     const ticket = document.getElementById('ticket');
     const scrim = document.getElementById('ticket-scrim');
+    if(!ticket || !scrim) return;
 
     if(!row){
       ticket.className = "not-found";
@@ -99,290 +125,3 @@
             <div class="label">Precio</div>
             <div class="value">${formatPrice(row[COLS.precio])}</div>
           </div>
-          <div class="price-card club">
-            <div class="label">Club de lectores</div>
-            <div class="value">${formatPrice(row[COLS.precioClub])}</div>
-          </div>
-        </div>
-        <div class="ticket-actions">
-          <button id="ticket-close">Seguir escaneando</button>
-          <button id="ticket-save">Guardar</button>
-        </div>
-      `;
-    }
-
-    document.getElementById('ticket-close').addEventListener('click', closeTicket);
-    const saveBtn = document.getElementById('ticket-save');
-    if(saveBtn){
-      saveBtn.addEventListener('click', () => {
-        addToCart(row);
-        saveBtn.textContent = "Guardado ✓";
-        saveBtn.classList.add('saved');
-        saveBtn.disabled = true;
-        setTimeout(closeTicket, 500);
-      });
-    }
-    ticket.classList.add('show');
-    scrim.classList.add('show');
-  }
-
-  // ---------- Carrito / suma ----------
-  let cartItems = [];
-
-  function parsePrice(raw){
-    if(raw === undefined || raw === null) return 0;
-    let s = raw.toString().trim().replace(/[^\d.,]/g, '');
-    if(!s) return 0;
-    const hasDot = s.includes('.');
-    const hasComma = s.includes(',');
-    if(hasDot && hasComma){
-      s = s.replace(/\./g, '').replace(',', '.');
-    } else if(hasComma && !hasDot){
-      s = s.replace(',', '.');
-    } else if(hasDot && !hasComma){
-      const afterDot = s.split('.').pop();
-      if(afterDot.length === 3){
-        s = s.replace(/\./g, '');
-      }
-    }
-    const n = parseFloat(s);
-    return isNaN(n) ? 0 : n;
-  }
-
-  function formatCLP(n){
-    return '$' + Math.round(n).toLocaleString('es-CL');
-  }
-
-  function addToCart(row){
-    cartItems.push({
-      sku: normalizeSku(row[COLS.sku]),
-      titulo: row[COLS.titulo] || "Sin título",
-      precio: parsePrice(row[COLS.precio]),
-      precioClub: parsePrice(row[COLS.precioClub])
-    });
-    renderCartBar();
-  }
-
-  function renderCartBar(){
-    const bar = document.getElementById('cart-bar');
-    document.getElementById('cart-count').textContent =
-      `${cartItems.length} producto${cartItems.length === 1 ? '' : 's'}`;
-    document.getElementById('cart-total').textContent = "Ver Total";
-    bar.classList.toggle('show', cartItems.length > 0);
-  }
-
-  function cartTotal(mode){
-    const key = mode === 'club' ? 'precioClub' : 'precio';
-    return cartItems.reduce((sum, i) => sum + (i[key] || 0), 0);
-  }
-
-  let activePriceMode = 'normal'; 
-
-  function renderCartSheet(){
-    const sheet = document.getElementById('cart-sheet');
-    const totalNormal = cartTotal('normal');
-    const totalClub = cartTotal('club');
-    const rows = cartItems.map((item, idx) => `
-      <div class="cart-item">
-        <div class="info">
-          <div class="t">${item.titulo}</div>
-          <div class="s">${item.sku}</div>
-        </div>
-        <div class="p">
-          ${formatCLP(item.precio)}
-          <span class="club">${formatCLP(item.precioClub)}</span>
-        </div>
-        <button class="rm" onclick="removeFromCart(${idx})">×</button>
-      </div>
-    `).join('');
-    sheet.innerHTML = `
-      <h2>Productos guardados</h2>
-      ${rows || '<p style="color:var(--text-muted); font-size:13px;">Todavía no guardaste ningún producto.</p>'}
-      <div class="totals-block">
-        <div class="cart-total-row normal" id="total-row-normal" onclick="setActivePriceMode('normal')" style="cursor:pointer;">
-          <span class="label">Total (Precio normal) ${activePriceMode === 'normal' ? '✓' : ''}</span>
-          <span class="value">${formatCLP(totalNormal)}</span>
-        </div>
-        <div class="cart-total-row club" id="total-row-club" onclick="setActivePriceMode('club')" style="cursor:pointer;">
-          <span class="label">Total (Club de lectores) ${activePriceMode === 'club' ? '✓' : ''}</span>
-          <span class="value">${formatCLP(totalClub)}</span>
-        </div>
-      </div>
-      <button id="cart-clear">Vaciar lista</button>
-      <button id="cart-close">Cerrar</button>
-    `;
-    document.getElementById('cart-close').addEventListener('click', closeCart);
-    document.getElementById('cart-clear').addEventListener('click', () => {
-      cartItems = [];
-      renderCartBar();
-      renderCartSheet();
-    });
-  }
-
-  function setActivePriceMode(mode){
-    activePriceMode = mode;
-    renderCartSheet();
-    renderCartBar();
-  }
-
-  function removeFromCart(idx){
-    cartItems.splice(idx, 1);
-    renderCartBar();
-    renderCartSheet();
-  }
-
-  function openCart(){
-    renderCartSheet();
-    document.getElementById('cart-sheet').classList.add('show');
-    scannerLocked = true;
-  }
-
-  function closeCart(){
-    document.getElementById('cart-sheet').classList.remove('show');
-    scannerLocked = false;
-  }
-
-  function closeTicket(){
-    document.getElementById('ticket').classList.remove('show');
-    document.getElementById('ticket-scrim').classList.remove('show');
-    setTimeout(() => { scannerLocked = false; }, 200);
-  }
-
-  // ---------- Scanner ----------
-  let scannerLocked = false;
-
-  function onScanSuccess(decodedText){
-    if(scannerLocked) return;
-    if(!catalogReady){
-      statusText.textContent = "catálogo aún no cargado, espera…";
-      return;
-    }
-    scannerLocked = true;
-    if(navigator.vibrate) navigator.vibrate(60);
-    const sku = normalizeSku(decodedText);
-    const row = catalogIndex[sku];
-    showTicket(row, sku);
-  }
-
-  // Función para re-activar el enfoque al tocar la pantalla en iOS
-  async function triggerReFocus() {
-    if (!html5QrCode || scannerLocked) return;
-    try {
-      const hint = document.querySelector('.hint');
-      const prevText = hint.textContent;
-      hint.textContent = "Enfocando…";
-
-      await html5QrCode.applyVideoConstraints({
-        advanced: [{ focusMode: "continuous" }]
-      });
-
-      setTimeout(() => { hint.textContent = prevText; }, 1000);
-    } catch (e) {
-      // iOS Safari no soporta ajustar el foco por software; se ignora sin romper nada.
-      console.log("Refocus no soportado directamente:", e);
-    }
-  }
-
-  // Fuerza los atributos correctos en el <video> apenas aparece,
-  // ANTES de que arranque a reproducir. Hacerlo después de start()
-  // llega tarde en iOS: Safari ya intentó abrir el video nativo a pantalla completa.
-  function watchVideoForIOS(){
-    const container = document.getElementById('reader');
-    if(!container) return;
-    const observer = new MutationObserver(() => {
-      const videoElem = container.querySelector('video');
-      if (videoElem) {
-        videoElem.setAttribute("playsinline", "true");
-        videoElem.setAttribute("webkit-playsinline", "true");
-        videoElem.muted = true;
-        videoElem.setAttribute("muted", "true");
-        videoElem.setAttribute("autoplay", "true");
-        observer.disconnect();
-      }
-    });
-    observer.observe(container, { childList: true, subtree: true });
-  }
-
-  function showTapToStartOverlay(retryFn){
-    let overlay = document.getElementById('ios-tap-start');
-    if(overlay) return; // ya existe
-    overlay = document.createElement('div');
-    overlay.id = 'ios-tap-start';
-    overlay.style.cssText = `
-      position: fixed; inset: 0; z-index: 9999;
-      background: rgba(0,0,0,0.85); color: #fff;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; padding: 24px; font-family: sans-serif;
-    `;
-    overlay.innerHTML = `
-      <div style="font-size:16px; margin-bottom:16px;">Toca para activar la cámara</div>
-      <button id="ios-tap-start-btn" style="padding:12px 24px; font-size:15px; border-radius:8px; border:none; background:#fff; color:#000;">Activar cámara</button>
-    `;
-    document.body.appendChild(overlay);
-    document.getElementById('ios-tap-start-btn').addEventListener('click', async () => {
-      overlay.remove();
-      await retryFn();
-    }, { once: true });
-  }
-
-  async function startScanner(){
-    html5QrCode = new Html5Qrcode("reader", {
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.QR_CODE
-      ],
-      verbose: false
-    });
-
-    // Sin useBarCodeDetectorIfSupported: esa API nativa no existe en Safari/iOS
-    // y forzarla puede impedir que el escaneo detecte códigos.
-    const qrScanConfig = { fps: 15 };
-
-    // Constraints simples: pedir width/height "ideal" altos puede disparar
-    // OverconstrainedError en algunos iPhones más viejos.
-    const cameraConfig = { facingMode: "environment" };
-
-    watchVideoForIOS();
-
-    try {
-      await html5QrCode.start(cameraConfig, qrScanConfig, onScanSuccess, () => {});
-    } catch (err) {
-      console.error("Camera error (auto):", err);
-      try {
-        const devices = await Html5Qrcode.getCameras();
-        if (devices && devices.length > 0) {
-          const backCam = devices.find(d =>
-            d.label.toLowerCase().includes('back') ||
-            d.label.toLowerCase().includes('trasera') ||
-            d.label.toLowerCase().includes('environment')
-          ) || devices[devices.length - 1];
-
-          watchVideoForIOS();
-          await html5QrCode.start(backCam.id, qrScanConfig, onScanSuccess, () => {});
-        } else {
-          throw new Error("No cameras");
-        }
-      } catch (err2) {
-        console.error("Camera error:", err2);
-        // En iOS, si falló por falta de gesto de usuario (NotAllowedError u otro),
-        // ofrecemos un botón que reintenta el start() dentro de un tap real.
-        showTapToStartOverlay(startScanner);
-      }
-    }
-  }
-
-  // Evento para activar enfoque al tocar el visor
-  document.getElementById('scanner-wrap').addEventListener('click', triggerReFocus);
-
-  // Actualizar el texto del Hint
-  document.querySelector('.hint').textContent = "Toca la pantalla para enfocar";
-
-  loadCatalog();
-  startScanner();
-  setInterval(loadCatalog, 3 * 60 * 1000);
-</script>

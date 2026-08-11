@@ -20,8 +20,8 @@
     --line:           #3a3128;
     --text:           #f2e9de;
     --text-muted:     #a79684;
-    --accent:         #c9622a;   /* naranja funda de disco */
-    --gold:           #d4af37;   /* precio */
+    --accent:         #c9622a;
+    --gold:           #d4af37;
     --error:          #c0453a;
     --radius:         18px;
   }
@@ -38,7 +38,6 @@
     flex-direction:column;
   }
 
-  /* ---------- Header ---------- */
   header{
     padding:16px 20px 12px;
     display:flex;
@@ -73,7 +72,6 @@
   #status-dot.ready{ background:#5fae7a; }
   #status-dot.error{ background:var(--error); }
   .status-wrap{ display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted); }
-
 
   #scanner-wrap{
     position:relative;
@@ -157,7 +155,6 @@
     font-size:14px;
   }
 
-
   #ticket-scrim{
     position:fixed; inset:0;
     background:rgba(0,0,0,.55);
@@ -183,7 +180,6 @@
     overflow-y:auto;
   }
   #ticket.show{ transform:translateY(0); }
-
 
   #ticket::before{
     content:"";
@@ -293,7 +289,6 @@
     border-color:#5fae7a;
   }
 
-  /* ---------- Cart bar ---------- */
   #cart-bar{
     position:fixed;
     left:16px; right:16px;
@@ -465,7 +460,7 @@
       <div class="scanline"></div>
     </div>
   </div>
-  <div class="hint">Apunta al código de barras</div>
+  <div class="hint">Toca la pantalla para enfocar</div>
 
   <div id="camera-error">
     <p>No pudimos acceder a la cámara.<br>Revisa los permisos del navegador y vuelve a intentar.</p>
@@ -500,6 +495,7 @@
   const statusText = document.getElementById('status-text');
   let catalogIndex = {};
   let catalogReady = false;
+  let html5QrCode = null;
 
   function normalizeSku(s){
     return (s || "").toString().trim().toUpperCase();
@@ -625,7 +621,7 @@
     } else if(hasDot && !hasComma){
       const afterDot = s.split('.').pop();
       if(afterDot.length === 3){
-        s = s.replace(/\./g, ''); // punto usado como separador de miles
+        s = s.replace(/\./g, '');
       }
     }
     const n = parseFloat(s);
@@ -747,8 +743,24 @@
     showTicket(row, sku);
   }
 
+  async function triggerReFocus() {
+    if (!html5QrCode || scannerLocked) return;
+    try {
+      const hint = document.querySelector('.hint');
+      hint.textContent = "Enfocando…";
+
+      await html5QrCode.applyVideoConstraints({
+        advanced: [{ focusMode: "continuous" }]
+      });
+
+      setTimeout(() => { hint.textContent = "Toca la pantalla para enfocar"; }, 1000);
+    } catch (e) {
+      console.log("Reenfoque continuo:", e);
+    }
+  }
+
   async function startScanner(){
-    const html5QrCode = new Html5Qrcode("reader", {
+    html5QrCode = new Html5Qrcode("reader", {
       formatsToSupport: [
         Html5QrcodeSupportedFormats.EAN_13,
         Html5QrcodeSupportedFormats.EAN_8,
@@ -768,8 +780,13 @@
       }
     };
 
-    // Callback para asegurar 'playsinline' en iOS Safari cuando el elemento <video> es creado
-    const ensureVideoPlaysInline = () => {
+    const cameraConfig = { 
+      facingMode: "environment",
+      width: { ideal: 1920 },
+      height: { ideal: 1080 }
+    };
+
+    const ensureVideoSetup = () => {
       const videoElem = document.querySelector("#reader video");
       if (videoElem) {
         videoElem.setAttribute("playsinline", "true");
@@ -777,56 +794,34 @@
     };
 
     try {
-      // Intento 1: Cámara trasera directa
-      await html5QrCode.start(
-        { facingMode: { exact: "environment" } },
-        qrScanConfig,
-        onScanSuccess,
-        () => {}
-      );
-      ensureVideoPlaysInline();
-    } catch (err1) {
+      await html5QrCode.start(cameraConfig, qrScanConfig, onScanSuccess, () => {});
+      ensureVideoSetup();
+    } catch (err) {
       try {
-        // Intento 2: Fallback para Safari (sin 'exact')
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          qrScanConfig,
-          onScanSuccess,
-          () => {}
-        );
-        ensureVideoPlaysInline();
-      } catch (err2) {
-        try {
-          // Intento 3: Consulta explícita de dispositivos (desencadena diálogo de permisos iOS)
-          const devices = await Html5Qrcode.getCameras();
-          if (devices && devices.length > 0) {
-            const backCam = devices.find(d => 
-              d.label.toLowerCase().includes('back') || 
-              d.label.toLowerCase().includes('trasera') || 
-              d.label.toLowerCase().includes('environment')
-            ) || devices[devices.length - 1];
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          const backCam = devices.find(d => 
+            d.label.toLowerCase().includes('back') || 
+            d.label.toLowerCase().includes('trasera') || 
+            d.label.toLowerCase().includes('environment')
+          ) || devices[devices.length - 1];
 
-            await html5QrCode.start(
-              backCam.id,
-              qrScanConfig,
-              onScanSuccess,
-              () => {}
-            );
-            ensureVideoPlaysInline();
-          } else {
-            throw new Error("No camera devices found");
-          }
-        } catch (err3) {
-          console.error("Camera start failed:", err3);
-          document.getElementById('camera-error').classList.add('show');
+          await html5QrCode.start(backCam.id, qrScanConfig, onScanSuccess, () => {});
+          ensureVideoSetup();
+        } else {
+          throw new Error("No cameras");
         }
+      } catch (err2) {
+        console.error("Camera error:", err2);
+        document.getElementById('camera-error').classList.add('show');
       }
     }
   }
 
+  document.getElementById('scanner-wrap').addEventListener('click', triggerReFocus);
+
   loadCatalog();
   startScanner();
-  // refrescar catálogo cada 3 minutos por si cambian precios
   setInterval(loadCatalog, 3 * 60 * 1000);
 </script>
 

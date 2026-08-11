@@ -519,11 +519,19 @@
     }
     box.textContent += (box.textContent ? "\n---\n" : "") + msg;
   }
+  // html5-qrcode a veces lanza strings planos en vez de Error, por eso
+  // err.message puede venir undefined. Esta función siempre saca algo legible.
+  function errText(err){
+    if (!err) return "(error vacío)";
+    if (typeof err === "string") return err;
+    if (err.message) return err.message;
+    try { return JSON.stringify(err); } catch(e) { return String(err); }
+  }
   window.addEventListener('error', (e) => {
     showDebugError("JS ERROR: " + e.message + " (línea " + e.lineno + ")");
   });
   window.addEventListener('unhandledrejection', (e) => {
-    showDebugError("PROMISE ERROR: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    showDebugError("PROMISE ERROR: " + errText(e.reason));
   });
   // ==========================================
 
@@ -582,7 +590,7 @@
       statusText.textContent = "";
     }catch(err){
       console.error(err);
-      showDebugError("Error cargando catálogo: " + err.message);
+      showDebugError("Error cargando catálogo: " + errText(err));
       statusDot.className = "error";
       statusText.textContent = "error al cargar catálogo";
     }
@@ -866,39 +874,24 @@
 
       watchVideoForIOS();
 
-      // Sin qrbox fijo: en iOS, si el contenedor aún no tiene alto real
-      // cuando arranca la cámara, un qrbox de tamaño fijo (280x160) hace
-      // que la librería falle en silencio. Escaneando el frame completo
-      // se elimina ese punto de falla.
-      try {
-        // iOS suele entregar una resolución baja por defecto, insuficiente
-        // para leer líneas finas de un código de barras. Pedimos algo más
-        // alto; si el dispositivo no lo soporta, probamos sin esa restricción.
-        await html5QrCode.start(
-          {
-            facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          },
-          { fps: 10 },
-          onScanSuccess,
-          () => {}
-        );
-      } catch (resErr) {
-        showDebugError("Fallo con resolución alta, reintentando estándar: " + resErr.message);
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: 10 },
-          onScanSuccess,
-          () => {}
-        );
-      }
+      // "ideal" es solo una sugerencia para el navegador, nunca falla duro
+      // (a diferencia de "exact"), así que un único intento alcanza.
+      await html5QrCode.start(
+        {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        { fps: 10 },
+        onScanSuccess,
+        () => {}
+      );
 
       triggerReFocus(); // intento inicial de foco continuo
 
     } catch (err) {
       console.error(err);
-      showDebugError("No se pudo iniciar la cámara: " + err.message);
+      showDebugError("No se pudo iniciar la cámara: " + errText(err));
       document.getElementById('camera-error').classList.add('show');
       showTapToStartOverlay(startScanner);
     }

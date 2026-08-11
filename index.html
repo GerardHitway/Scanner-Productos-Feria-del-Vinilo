@@ -339,4 +339,50 @@
       verbose: false
     });
 
-    // Sin useBarCodeDetectorIfSupported
+    // Sin useBarCodeDetectorIfSupported: esa API nativa no existe en Safari/iOS
+    // y forzarla puede impedir que el escaneo detecte códigos.
+    const qrScanConfig = { fps: 15 };
+
+    // Constraints simples: pedir width/height "ideal" altos puede disparar
+    // OverconstrainedError en algunos iPhones más viejos.
+    const cameraConfig = { facingMode: "environment" };
+
+    watchVideoForIOS();
+
+    try {
+      await html5QrCode.start(cameraConfig, qrScanConfig, onScanSuccess, () => {});
+    } catch (err) {
+      console.error("Camera error (auto):", err);
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          const backCam = devices.find(d =>
+            d.label.toLowerCase().includes('back') ||
+            d.label.toLowerCase().includes('trasera') ||
+            d.label.toLowerCase().includes('environment')
+          ) || devices[devices.length - 1];
+
+          watchVideoForIOS();
+          await html5QrCode.start(backCam.id, qrScanConfig, onScanSuccess, () => {});
+        } else {
+          throw new Error("No cameras");
+        }
+      } catch (err2) {
+        console.error("Camera error:", err2);
+        // En iOS, si falló por falta de gesto de usuario (NotAllowedError u otro),
+        // ofrecemos un botón que reintenta el start() dentro de un tap real.
+        showTapToStartOverlay(startScanner);
+      }
+    }
+  }
+
+  // Evento para activar enfoque al tocar el visor
+  document.getElementById('scanner-wrap').addEventListener('click', triggerReFocus);
+
+  // Actualizar el texto del Hint
+  document.querySelector('.hint').textContent = "Toca la pantalla para enfocar";
+
+  loadCatalog();
+  startScanner();
+  setInterval(loadCatalog, 3 * 60 * 1000);
+</script>

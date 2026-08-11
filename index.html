@@ -14,16 +14,16 @@
 
 <style>
   :root{
-    --bg:            #14100e;
-    --surface:       #201a16;
-    --surface-2:     #2a221c;
-    --line:          #3a3128;
-    --text:          #f2e9de;
-    --text-muted:    #a79684;
-    --accent:        #c9622a;
-    --gold:          #d4af37;
-    --error:         #c0453a;
-    --radius:        18px;
+    --bg:#14100e;
+    --surface:#201a16;
+    --surface-2:#2a221c;
+    --line:#3a3128;
+    --text:#f2e9de;
+    --text-muted:#a79684;
+    --accent:#c9622a;
+    --gold:#d4af37;
+    --error:#c0453a;
+    --radius:18px;
   }
 
   *{
@@ -120,9 +120,9 @@
     width:100% !important;
     height:100% !important;
     object-fit:cover !important;
+    display:block;
 
     /* iOS Safari */
-    display:block;
     -webkit-transform:translateZ(0);
     transform:translateZ(0);
   }
@@ -151,6 +151,9 @@
     justify-content:center;
   }
 
+  /*
+   * Zona más ancha para EAN/UPC.
+   */
   .viewfinder .frame{
     width:88%;
     max-width:500px;
@@ -275,7 +278,7 @@
     font-size:14px;
   }
 
-  /* ---------- iOS start overlay ---------- */
+  /* ---------- iOS start ---------- */
 
   #ios-tap-start{
     position:fixed;
@@ -725,9 +728,12 @@
     </div>
   </div>
 
-  <div class="hint">Apunta al código de barras</div>
+  <div class="hint">
+    Apunta al código de barras
+  </div>
 
   <div id="camera-error">
+
     <p>
       No pudimos acceder a la cámara.<br>
       Revisa los permisos del navegador y vuelve a intentar.
@@ -736,6 +742,7 @@
     <button onclick="retryCamera()">
       Reintentar
     </button>
+
   </div>
 
 </div>
@@ -744,8 +751,13 @@
 <div id="ticket"></div>
 
 <div id="cart-bar" onclick="openCart()">
-  <span class="cart-count" id="cart-count">0 productos</span>
-  <span class="cart-total" id="cart-total">Ver Total</span>
+  <span class="cart-count" id="cart-count">
+    0 productos
+  </span>
+
+  <span class="cart-total" id="cart-total">
+    Ver Total
+  </span>
 </div>
 
 <div id="cart-sheet"></div>
@@ -758,46 +770,69 @@
 
   function showDebugError(msg){
 
-    let box = document.getElementById('debug-error-box');
+    let box =
+      document.getElementById(
+        'debug-error-box'
+      );
 
     if(!box){
 
-      box = document.createElement('div');
+      box =
+        document.createElement(
+          'div'
+        );
 
-      box.id = 'debug-error-box';
+      box.id =
+        'debug-error-box';
 
-      document.body.appendChild(box);
+      document.body.appendChild(
+        box
+      );
+
     }
 
     box.textContent +=
-      (box.textContent ? "\n---\n" : "") + msg;
+      (
+        box.textContent
+          ? "\n---\n"
+          : ""
+      ) + msg;
+
   }
 
-  window.addEventListener('error', (e) => {
 
-    showDebugError(
-      "JS ERROR: " +
-      e.message +
-      " (línea " +
-      e.lineno +
-      ")"
-    );
+  window.addEventListener(
+    'error',
+    (e) => {
 
-  });
+      showDebugError(
+        "JS ERROR: " +
+        e.message +
+        " (línea " +
+        e.lineno +
+        ")"
+      );
 
-  window.addEventListener('unhandledrejection', (e) => {
+    }
+  );
 
-    showDebugError(
-      "PROMISE ERROR: " +
-      (
-        e.reason &&
-        e.reason.message
-          ? e.reason.message
-          : e.reason
-      )
-    );
 
-  });
+  window.addEventListener(
+    'unhandledrejection',
+    (e) => {
+
+      showDebugError(
+        "PROMISE ERROR: " +
+        (
+          e.reason &&
+          e.reason.message
+            ? e.reason.message
+            : e.reason
+        )
+      );
+
+    }
+  );
 
 
   /* =========================================================
@@ -810,36 +845,33 @@
 
   const COLS = {
 
-    sku: "SKU",
+    sku:"SKU",
 
-    artista: "Artista",
+    artista:"Artista",
 
-    titulo: "Título",
+    titulo:"Título",
 
-    precio: "Precio",
+    precio:"Precio",
 
-    precioClub: "Precio Club de lectores",
+    precioClub:"Precio Club de lectores",
 
-    imagen: "Imagen"
+    imagen:"Imagen"
 
   };
 
 
   /* =========================================================
-     DETECCIÓN DE IOS
+     DETECCIÓN IOS
   ========================================================= */
 
   const isIOS =
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (
-      navigator.platform === "MacIntel" &&
-      navigator.maxTouchPoints > 1
-    );
-
-
-  const isSafari =
-    /^((?!chrome|android).)*safari/i.test(
+    /iPad|iPhone|iPod/.test(
       navigator.userAgent
+    ) ||
+    (
+      navigator.platform ===
+      "MacIntel" &&
+      navigator.maxTouchPoints > 1
     );
 
 
@@ -848,10 +880,14 @@
   ========================================================= */
 
   const statusDot =
-    document.getElementById('status-dot');
+    document.getElementById(
+      'status-dot'
+    );
 
   const statusText =
-    document.getElementById('status-text');
+    document.getElementById(
+      'status-text'
+    );
 
 
   let catalogIndex = {};
@@ -866,13 +902,40 @@
 
   let selectedCameraId = null;
 
-  let cartItems = [];
 
-  let activePriceMode = 'normal';
+  /* =========================================================
+     FILTRO DE LECTURAS
+  ========================================================= */
+
+  let scanCandidate = "";
+
+  let scanCandidateCount = 0;
+
+  let lastAcceptedScan = "";
+
+  let lastAcceptedTime = 0;
+
+
+  /*
+   * Android:
+   * 1 lectura.
+   *
+   * iPhone:
+   * 3 lecturas consecutivas iguales.
+   *
+   * De esta forma NO ralentizamos Android.
+   */
+
+  const REQUIRED_CONFIRMATIONS =
+    isIOS ? 3 : 1;
+
+
+  const ACCEPT_COOLDOWN =
+    isIOS ? 1800 : 1000;
 
 
   /* =========================================================
-     CATÁLOGO
+     NORMALIZAR SKU
   ========================================================= */
 
   function normalizeSku(s){
@@ -885,39 +948,64 @@
   }
 
 
+  /* =========================================================
+     IMÁGENES
+  ========================================================= */
+
   function toDirectImageUrl(url){
 
-    if(!url) return "";
+    if(!url)
+      return "";
 
-    url = url.trim();
+    url =
+      url.trim();
+
 
     const driveMatch =
       url.match(
         /drive\.google\.com\/file\/d\/([^/]+)/
       );
 
+
     if(driveMatch){
 
-      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+      return (
+        "https://drive.google.com/uc?export=view&id=" +
+        driveMatch[1]
+      );
 
     }
 
+
     const driveIdMatch =
-      url.match(/[?&]id=([^&]+)/);
+      url.match(
+        /[?&]id=([^&]+)/
+      );
+
 
     if(
       driveIdMatch &&
-      url.includes('drive.google.com')
+      url.includes(
+        'drive.google.com'
+      )
     ){
 
-      return `https://drive.google.com/uc?export=view&id=${driveIdMatch[1]}`;
+      return (
+        "https://drive.google.com/uc?export=view&id=" +
+        driveIdMatch[1]
+      );
 
     }
+
 
     return url;
 
   }
 
+
+  /* =========================================================
+     CARGAR CATÁLOGO
+  ========================================================= */
 
   async function loadCatalog(){
 
@@ -926,26 +1014,31 @@
 
     statusDot.className = "";
 
+
     try{
 
       const res =
         await fetch(
           SHEET_CSV_URL,
           {
-            cache: "no-store"
+            cache:"no-store"
           }
         );
+
 
       if(!res.ok){
 
         throw new Error(
-          "HTTP " + res.status
+          "HTTP " +
+          res.status
         );
 
       }
 
+
       const csvText =
         await res.text();
+
 
       const parsed =
         Papa.parse(
@@ -956,39 +1049,53 @@
           }
         );
 
+
       catalogIndex = {};
 
-      parsed.data.forEach(row => {
 
-        const sku =
-          normalizeSku(
-            row[COLS.sku]
-          );
+      parsed.data.forEach(
+        row => {
 
-        if(sku){
+          const sku =
+            normalizeSku(
+              row[COLS.sku]
+            );
 
-          catalogIndex[sku] = row;
+
+          if(sku){
+
+            catalogIndex[sku] =
+              row;
+
+          }
 
         }
+      );
 
-      });
 
       catalogReady = true;
 
-      statusDot.className = "ready";
+      statusDot.className =
+        "ready";
 
-      statusText.textContent = "";
+      statusText.textContent =
+        "";
+
 
     }catch(err){
 
       console.error(err);
+
 
       showDebugError(
         "Error cargando catálogo: " +
         err.message
       );
 
-      statusDot.className = "error";
+
+      statusDot.className =
+        "error";
+
 
       statusText.textContent =
         "error al cargar catálogo";
@@ -1014,9 +1121,14 @@
 
     }
 
+
     const cleaned =
       v.toString()
-        .replace(/[^\d.,-]/g, '');
+        .replace(
+          /[^\d.,-]/g,
+          ''
+        );
+
 
     return cleaned
       ? `$${cleaned}`
@@ -1036,13 +1148,20 @@
 
     }
 
+
     let s =
       raw
         .toString()
         .trim()
-        .replace(/[^\d.,]/g, '');
+        .replace(
+          /[^\d.,]/g,
+          ''
+        );
 
-    if(!s) return 0;
+
+    if(!s)
+      return 0;
+
 
     const hasDot =
       s.includes('.');
@@ -1051,12 +1170,22 @@
       s.includes(',');
 
 
-    if(hasDot && hasComma){
+    if(
+      hasDot &&
+      hasComma
+    ){
 
       s =
         s
-          .replace(/\./g, '')
-          .replace(',', '.');
+          .replace(
+            /\./g,
+            ''
+          )
+          .replace(
+            ',',
+            '.'
+          );
+
 
     }else if(
       hasComma &&
@@ -1064,7 +1193,11 @@
     ){
 
       s =
-        s.replace(',', '.');
+        s.replace(
+          ',',
+          '.'
+        );
+
 
     }else if(
       hasDot &&
@@ -1074,17 +1207,25 @@
       const afterDot =
         s.split('.').pop();
 
-      if(afterDot.length === 3){
+
+      if(
+        afterDot.length === 3
+      ){
 
         s =
-          s.replace(/\./g, '');
+          s.replace(
+            /\./g,
+            ''
+          );
 
       }
 
     }
 
+
     const n =
       parseFloat(s);
+
 
     return isNaN(n)
       ? 0
@@ -1095,9 +1236,247 @@
 
   function formatCLP(n){
 
-    return '$' +
+    return (
+      '$' +
       Math.round(n)
-        .toLocaleString('es-CL');
+        .toLocaleString(
+          'es-CL'
+        )
+    );
+
+  }
+
+
+  /* =========================================================
+     VALIDACIÓN EAN-13
+  ========================================================= */
+
+  function isValidEAN13(code){
+
+    if(
+      !/^\d{13}$/.test(code)
+    ){
+
+      return false;
+
+    }
+
+
+    let sum = 0;
+
+
+    for(
+      let i = 0;
+      i < 12;
+      i++
+    ){
+
+      const digit =
+        parseInt(
+          code[i],
+          10
+        );
+
+
+      sum +=
+        i % 2 === 0
+          ? digit
+          : digit * 3;
+
+    }
+
+
+    const checkDigit =
+      (
+        10 -
+        (
+          sum % 10
+        )
+      ) % 10;
+
+
+    return (
+      checkDigit ===
+      parseInt(
+        code[12],
+        10
+      )
+    );
+
+  }
+
+
+  /* =========================================================
+     VALIDACIÓN EAN-8
+  ========================================================= */
+
+  function isValidEAN8(code){
+
+    if(
+      !/^\d{8}$/.test(code)
+    ){
+
+      return false;
+
+    }
+
+
+    let sum = 0;
+
+
+    for(
+      let i = 0;
+      i < 7;
+      i++
+    ){
+
+      const digit =
+        parseInt(
+          code[i],
+          10
+        );
+
+
+      sum +=
+        i % 2 === 0
+          ? digit * 3
+          : digit;
+
+    }
+
+
+    const checkDigit =
+      (
+        10 -
+        (
+          sum % 10
+        )
+      ) % 10;
+
+
+    return (
+      checkDigit ===
+      parseInt(
+        code[7],
+        10
+      )
+    );
+
+  }
+
+
+  /* =========================================================
+     VALIDACIÓN UPC-A
+  ========================================================= */
+
+  function isValidUPCA(code){
+
+    if(
+      !/^\d{12}$/.test(code)
+    ){
+
+      return false;
+
+    }
+
+
+    let sum = 0;
+
+
+    for(
+      let i = 0;
+      i < 11;
+      i++
+    ){
+
+      const digit =
+        parseInt(
+          code[i],
+          10
+        );
+
+
+      sum +=
+        i % 2 === 0
+          ? digit * 3
+          : digit;
+
+    }
+
+
+    const checkDigit =
+      (
+        10 -
+        (
+          sum % 10
+        )
+      ) % 10;
+
+
+    return (
+      checkDigit ===
+      parseInt(
+        code[11],
+        10
+      )
+    );
+
+  }
+
+
+  /* =========================================================
+     VALIDACIÓN ESTRUCTURAL
+  ========================================================= */
+
+  function isStructurallyValidBarcode(code){
+
+    /*
+     * EAN-13
+     */
+    if(
+      /^\d{13}$/.test(code)
+    ){
+
+      return isValidEAN13(
+        code
+      );
+
+    }
+
+
+    /*
+     * EAN-8
+     */
+    if(
+      /^\d{8}$/.test(code)
+    ){
+
+      return isValidEAN8(
+        code
+      );
+
+    }
+
+
+    /*
+     * UPC-A
+     */
+    if(
+      /^\d{12}$/.test(code)
+    ){
+
+      return isValidUPCA(
+        code
+      );
+
+    }
+
+
+    /*
+     * CODE128 / CODE39:
+     * no aplicamos checksum aquí.
+     */
+    return true;
 
   }
 
@@ -1106,18 +1485,28 @@
      TICKET
   ========================================================= */
 
-  function showTicket(row, skuScanned){
+  function showTicket(
+    row,
+    skuScanned
+  ){
 
     const ticket =
-      document.getElementById('ticket');
+      document.getElementById(
+        'ticket'
+      );
+
 
     const scrim =
-      document.getElementById('ticket-scrim');
+      document.getElementById(
+        'ticket-scrim'
+      );
 
 
     if(!row){
 
-      ticket.className = "not-found";
+      ticket.className =
+        "not-found";
+
 
       ticket.innerHTML = `
 
@@ -1157,6 +1546,7 @@
 
       `;
 
+
     }else{
 
       const imgUrl =
@@ -1164,7 +1554,9 @@
           row[COLS.imagen]
         );
 
+
       ticket.className = "";
+
 
       ticket.innerHTML = `
 
@@ -1172,7 +1564,9 @@
 
           ${
             imgUrl
+
               ? `
+
                 <img
                   class="ticket-img"
                   src="${imgUrl}"
@@ -1181,33 +1575,48 @@
                     '<div class=&quot;ticket-img placeholder&quot;>sin imagen</div>'
                   "
                 >
+
               `
+
               : `
+
                 <div class="ticket-img placeholder">
                   sin imagen
                 </div>
+
               `
           }
+
 
           <div class="ticket-main">
 
             <div class="ticket-sku">
-              ${normalizeSku(row[COLS.sku])}
+              ${normalizeSku(
+                row[COLS.sku]
+              )}
             </div>
 
             <div class="ticket-title">
-              ${row[COLS.titulo] || "Sin título"}
+              ${
+                row[COLS.titulo] ||
+                "Sin título"
+              }
             </div>
 
             <div class="ticket-artist">
-              ${row[COLS.artista] || ""}
+              ${
+                row[COLS.artista] ||
+                ""
+              }
             </div>
 
           </div>
 
         </div>
 
+
         <hr class="ticket-divider">
+
 
         <div class="price-grid">
 
@@ -1218,10 +1627,15 @@
             </div>
 
             <div class="value">
-              ${formatPrice(row[COLS.precio])}
+              ${
+                formatPrice(
+                  row[COLS.precio]
+                )
+              }
             </div>
 
           </div>
+
 
           <div class="price-card club">
 
@@ -1230,12 +1644,17 @@
             </div>
 
             <div class="value">
-              ${formatPrice(row[COLS.precioClub])}
+              ${
+                formatPrice(
+                  row[COLS.precioClub]
+                )
+              }
             </div>
 
           </div>
 
         </div>
+
 
         <div class="ticket-actions">
 
@@ -1255,7 +1674,9 @@
 
 
     document
-      .getElementById('ticket-close')
+      .getElementById(
+        'ticket-close'
+      )
       .addEventListener(
         'click',
         closeTicket
@@ -1263,7 +1684,9 @@
 
 
     const saveBtn =
-      document.getElementById('ticket-save');
+      document.getElementById(
+        'ticket-save'
+      );
 
 
     if(saveBtn){
@@ -1281,7 +1704,9 @@
             'saved'
           );
 
-          saveBtn.disabled = true;
+          saveBtn.disabled =
+            true;
+
 
           setTimeout(
             closeTicket,
@@ -1294,9 +1719,14 @@
     }
 
 
-    ticket.classList.add('show');
+    ticket.classList.add(
+      'show'
+    );
 
-    scrim.classList.add('show');
+
+    scrim.classList.add(
+      'show'
+    );
 
   }
 
@@ -1304,6 +1734,9 @@
   /* =========================================================
      CARRITO
   ========================================================= */
+
+  let cartItems = [];
+
 
   function addToCart(row){
 
@@ -1330,6 +1763,7 @@
 
     });
 
+
     renderCartBar();
 
   }
@@ -1342,6 +1776,7 @@
         'cart-bar'
       );
 
+
     document.getElementById(
       'cart-count'
     ).textContent =
@@ -1351,10 +1786,12 @@
           : 's'
       }`;
 
+
     document.getElementById(
       'cart-total'
     ).textContent =
       "Ver Total";
+
 
     bar.classList.toggle(
       'show',
@@ -1371,13 +1808,25 @@
         ? 'precioClub'
         : 'precio';
 
+
     return cartItems.reduce(
-      (sum, i) =>
-        sum + (i[key] || 0),
+      (
+        sum,
+        i
+      ) =>
+        sum +
+        (
+          i[key] ||
+          0
+        ),
       0
     );
 
   }
+
+
+  let activePriceMode =
+    'normal';
 
 
   function renderCartSheet(){
@@ -1387,17 +1836,26 @@
         'cart-sheet'
       );
 
+
     const totalNormal =
-      cartTotal('normal');
+      cartTotal(
+        'normal'
+      );
+
 
     const totalClub =
-      cartTotal('club');
+      cartTotal(
+        'club'
+      );
 
 
     const rows =
       cartItems
         .map(
-          (item, idx) => `
+          (
+            item,
+            idx
+          ) => `
 
             <div class="cart-item">
 
@@ -1413,15 +1871,21 @@
 
               </div>
 
+
               <div class="p">
 
-                ${formatCLP(item.precio)}
+                ${formatCLP(
+                  item.precio
+                )}
 
                 <span class="club">
-                  ${formatCLP(item.precioClub)}
+                  ${formatCLP(
+                    item.precioClub
+                  )}
                 </span>
 
               </div>
+
 
               <button
                 class="rm"
@@ -1443,10 +1907,12 @@
         Productos guardados
       </h2>
 
+
       ${
         rows ||
         '<p style="color:var(--text-muted); font-size:13px;">Todavía no guardaste ningún producto.</p>'
       }
+
 
       <div class="totals-block">
 
@@ -1458,19 +1924,29 @@
         >
 
           <span class="label">
+
             Total (Precio normal)
+
             ${
-              activePriceMode === 'normal'
+              activePriceMode ===
+              'normal'
                 ? '✓'
                 : ''
             }
+
           </span>
 
+
           <span class="value">
-            ${formatCLP(totalNormal)}
+
+            ${formatCLP(
+              totalNormal
+            )}
+
           </span>
 
         </div>
+
 
         <div
           class="cart-total-row club"
@@ -1480,25 +1956,36 @@
         >
 
           <span class="label">
+
             Total (Club de lectores)
+
             ${
-              activePriceMode === 'club'
+              activePriceMode ===
+              'club'
                 ? '✓'
                 : ''
             }
+
           </span>
 
+
           <span class="value">
-            ${formatCLP(totalClub)}
+
+            ${formatCLP(
+              totalClub
+            )}
+
           </span>
 
         </div>
 
       </div>
 
+
       <button id="cart-clear">
         Vaciar lista
       </button>
+
 
       <button id="cart-close">
         Cerrar
@@ -1508,7 +1995,9 @@
 
 
     document
-      .getElementById('cart-close')
+      .getElementById(
+        'cart-close'
+      )
       .addEventListener(
         'click',
         closeCart
@@ -1516,7 +2005,9 @@
 
 
     document
-      .getElementById('cart-clear')
+      .getElementById(
+        'cart-clear'
+      )
       .addEventListener(
         'click',
         () => {
@@ -1533,9 +2024,12 @@
   }
 
 
-  function setActivePriceMode(mode){
+  function setActivePriceMode(
+    mode
+  ){
 
-    activePriceMode = mode;
+    activePriceMode =
+      mode;
 
     renderCartSheet();
 
@@ -1544,7 +2038,9 @@
   }
 
 
-  function removeFromCart(idx){
+  function removeFromCart(
+    idx
+  ){
 
     cartItems.splice(
       idx,
@@ -1563,10 +2059,16 @@
     renderCartSheet();
 
     document
-      .getElementById('cart-sheet')
-      .classList.add('show');
+      .getElementById(
+        'cart-sheet'
+      )
+      .classList.add(
+        'show'
+      );
 
-    scannerLocked = true;
+
+    scannerLocked =
+      true;
 
   }
 
@@ -1574,10 +2076,16 @@
   function closeCart(){
 
     document
-      .getElementById('cart-sheet')
-      .classList.remove('show');
+      .getElementById(
+        'cart-sheet'
+      )
+      .classList.remove(
+        'show'
+      );
 
-    scannerLocked = false;
+
+    scannerLocked =
+      false;
 
   }
 
@@ -1585,16 +2093,29 @@
   function closeTicket(){
 
     document
-      .getElementById('ticket')
-      .classList.remove('show');
+      .getElementById(
+        'ticket'
+      )
+      .classList.remove(
+        'show'
+      );
+
 
     document
-      .getElementById('ticket-scrim')
-      .classList.remove('show');
+      .getElementById(
+        'ticket-scrim'
+      )
+      .classList.remove(
+        'show'
+      );
+
 
     setTimeout(
       () => {
-        scannerLocked = false;
+
+        scannerLocked =
+          false;
+
       },
       200
     );
@@ -1606,11 +2127,23 @@
      SCANNER
   ========================================================= */
 
-  function onScanSuccess(decodedText){
+
+  function onScanSuccess(
+    decodedText
+  ){
+
+    /*
+     * Si estamos mostrando un producto
+     * no procesamos nuevas lecturas.
+     */
 
     if(scannerLocked)
       return;
 
+
+    /*
+     * El catálogo debe estar cargado.
+     */
 
     if(!catalogReady){
 
@@ -1622,125 +2155,291 @@
     }
 
 
-    scannerLocked = true;
-
-
-    if(navigator.vibrate){
-
-      navigator.vibrate(60);
-
-    }
-
-
     const sku =
       normalizeSku(
         decodedText
       );
 
 
+    if(!sku)
+      return;
+
+
+    /* =====================================================
+       1. VALIDAR FORMATO / CHECKSUM
+    ===================================================== */
+
+    if(
+      !isStructurallyValidBarcode(
+        sku
+      )
+    ){
+
+      /*
+       * La lectura tiene un checksum
+       * incorrecto.
+       *
+       * La descartamos inmediatamente.
+       */
+
+      scanCandidate = "";
+
+      scanCandidateCount = 0;
+
+      if(isIOS){
+
+        statusText.textContent =
+          "lectura descartada…";
+
+      }
+
+      return;
+
+    }
+
+
+    /* =====================================================
+       2. EN IPHONE EXIGIR VARIAS LECTURAS IGUALES
+    ===================================================== */
+
+    if(
+      sku ===
+      scanCandidate
+    ){
+
+      scanCandidateCount++;
+
+    }else{
+
+      scanCandidate =
+        sku;
+
+      scanCandidateCount =
+        1;
+
+    }
+
+
+    /*
+     * Android mantiene la velocidad original.
+     *
+     * iPhone debe confirmar 3 veces.
+     */
+
+    if(
+      scanCandidateCount <
+      REQUIRED_CONFIRMATIONS
+    ){
+
+      if(isIOS){
+
+        statusText.textContent =
+          `confirmando código… ${scanCandidateCount}/${REQUIRED_CONFIRMATIONS}`;
+
+      }
+
+      return;
+
+    }
+
+
+    /* =====================================================
+       3. EVITAR DUPLICADOS
+    ===================================================== */
+
+    const now =
+      Date.now();
+
+
+    if(
+      sku ===
+      lastAcceptedScan &&
+      (
+        now -
+        lastAcceptedTime
+      ) <
+      ACCEPT_COOLDOWN
+    ){
+
+      return;
+
+    }
+
+
+    /* =====================================================
+       4. ACEPTAR CÓDIGO
+    ===================================================== */
+
+    lastAcceptedScan =
+      sku;
+
+    lastAcceptedTime =
+      now;
+
+
+    scanCandidate =
+      "";
+
+    scanCandidateCount =
+      0;
+
+
+    scannerLocked =
+      true;
+
+
+    if(
+      navigator.vibrate
+    ){
+
+      navigator.vibrate(
+        60
+      );
+
+    }
+
+
+    /*
+     * Buscar producto.
+     */
+
     const row =
       catalogIndex[sku];
 
+
+    /*
+     * Mostrar resultado.
+     */
 
     showTicket(
       row,
       sku
     );
 
+
+    statusText.textContent =
+      "";
+
   }
 
 
   /* =========================================================
-     IOS VIDEO FIX
+     PREPARAR VIDEO PARA IOS
   ========================================================= */
 
-  function prepareVideoForIOS(){
+  function watchVideoForIOS(){
 
     const container =
       document.getElementById(
         'reader'
       );
 
+
     if(!container)
       return;
 
 
-    const applyVideoSettings =
-      () => {
+    function configureVideo(
+      videoElem
+    ){
 
-        const video =
-          container.querySelector(
-            'video'
-          );
-
-        if(!video)
-          return false;
+      if(!videoElem)
+        return;
 
 
-        video.setAttribute(
-          'playsinline',
-          ''
+      videoElem.setAttribute(
+        "playsinline",
+        ""
+      );
+
+
+      videoElem.setAttribute(
+        "webkit-playsinline",
+        ""
+      );
+
+
+      videoElem.setAttribute(
+        "autoplay",
+        ""
+      );
+
+
+      videoElem.setAttribute(
+        "muted",
+        ""
+      );
+
+
+      videoElem.muted =
+        true;
+
+
+      videoElem.autoplay =
+        true;
+
+
+      videoElem.playsInline =
+        true;
+
+
+      /*
+       * Intentamos reproducir.
+       * En iOS el start() ya ocurre después
+       * de la interacción del usuario.
+       */
+
+      const promise =
+        videoElem.play();
+
+
+      if(
+        promise &&
+        typeof promise.catch ===
+        'function'
+      ){
+
+        promise.catch(
+          () => {}
         );
 
-        video.setAttribute(
-          'webkit-playsinline',
-          ''
-        );
+      }
 
-        video.setAttribute(
-          'autoplay',
-          ''
-        );
-
-        video.setAttribute(
-          'muted',
-          ''
-        );
-
-        video.muted = true;
-
-        video.autoplay = true;
-
-        video.playsInline = true;
+    }
 
 
-        /*
-         * Intentamos reproducir el video.
-         * En iOS esto debe ocurrir después
-         * de una interacción del usuario.
-         */
-
-        const playPromise =
-          video.play();
-
-        if(
-          playPromise &&
-          typeof playPromise.catch === 'function'
-        ){
-
-          playPromise.catch(
-            () => {}
-          );
-
-        }
+    const existingVideo =
+      container.querySelector(
+        'video'
+      );
 
 
-        return true;
+    if(existingVideo){
 
-      };
+      configureVideo(
+        existingVideo
+      );
 
-
-    if(applyVideoSettings())
       return;
+
+    }
 
 
     const observer =
       new MutationObserver(
         () => {
 
-          if(
-            applyVideoSettings()
-          ){
+          const videoElem =
+            container.querySelector(
+              'video'
+            );
+
+
+          if(videoElem){
+
+            configureVideo(
+              videoElem
+            );
 
             observer.disconnect();
 
@@ -1762,9 +2461,7 @@
 
 
   /* =========================================================
-     QRBOX
-     Zona rectangular especialmente útil
-     para EAN / UPC / CODE128
+     ZONA DE ESCANEO
   ========================================================= */
 
   function getScanBox(
@@ -1772,54 +2469,59 @@
     viewfinderHeight
   ){
 
+    /*
+     * Código de barras:
+     * ancho grande y alto relativamente pequeño.
+     */
+
     let width =
       Math.floor(
-        viewfinderWidth * 0.88
+        viewfinderWidth *
+        0.90
       );
 
 
     let height =
       Math.floor(
         Math.min(
-          180,
-          viewfinderHeight * 0.30
+          220,
+          viewfinderHeight *
+          0.35
         )
       );
 
 
-    /*
-     * Evita tamaños demasiado pequeños
-     * en pantallas pequeñas.
-     */
-
     width =
       Math.max(
-        240,
+        280,
         width
       );
 
+
     height =
       Math.max(
-        100,
+        110,
         height
       );
 
 
     /*
-     * Evita superar el tamaño real
-     * del contenedor.
+     * No superar el contenedor.
      */
 
     width =
       Math.min(
         width,
-        viewfinderWidth - 20
+        viewfinderWidth -
+        20
       );
+
 
     height =
       Math.min(
         height,
-        viewfinderHeight - 20
+        viewfinderHeight -
+        20
       );
 
 
@@ -1837,16 +2539,39 @@
 
   function createScanner(){
 
+    /*
+     * Si existe un scanner anterior,
+     * intentamos limpiarlo.
+     */
+
     if(html5QrCode){
 
       try{
 
         html5QrCode.clear();
 
-      }catch(e){}
+      }catch(e){
+
+        console.warn(
+          "No se pudo limpiar scanner anterior",
+          e
+        );
+
+      }
 
     }
 
+
+    /*
+     * IMPORTANTE:
+     *
+     * Android:
+     * mantiene BarcodeDetector si está disponible.
+     *
+     * iPhone:
+     * lo desactivamos porque estamos intentando
+     * evitar las lecturas incorrectas que detectaste.
+     */
 
     html5QrCode =
       new Html5Qrcode(
@@ -1855,14 +2580,8 @@
 
           verbose:false,
 
-          /*
-           * Permite utilizar BarcodeDetector
-           * cuando el navegador lo soporte.
-           * Si no lo soporta, html5-qrcode
-           * utiliza su propio procesamiento.
-           */
-
-          useBarCodeDetectorIfSupported:true,
+          useBarCodeDetectorIfSupported:
+            !isIOS,
 
           formatsToSupport:[
 
@@ -1889,7 +2608,7 @@
 
 
   /* =========================================================
-     OBTENER CÁMARA TRASERA
+     BUSCAR CÁMARA TRASERA
   ========================================================= */
 
   async function findBackCamera(){
@@ -1920,13 +2639,18 @@
         );
 
 
-      if(!cameras.length)
+      if(
+        !cameras.length
+      ){
+
         return null;
+
+      }
 
 
       /*
-       * Intentamos encontrar una cámara
-       * cuyo nombre indique que es trasera.
+       * Buscar cámara trasera
+       * por nombre.
        */
 
       const backCamera =
@@ -1934,7 +2658,8 @@
           camera =>
             /back|rear|environment|trasera|posterior/i
               .test(
-                camera.label || ""
+                camera.label ||
+                ""
               )
         );
 
@@ -1947,14 +2672,13 @@
 
 
       /*
-       * Si Safari todavía no entrega
-       * nombres de cámara, usamos la última
-       * como fallback.
+       * Fallback.
        */
 
       return cameras[
         cameras.length - 1
       ].deviceId;
+
 
     }catch(err){
 
@@ -1962,6 +2686,7 @@
         "No se pudo enumerar cámaras:",
         err
       );
+
 
       return null;
 
@@ -1980,7 +2705,8 @@
       return;
 
 
-    scannerStarting = true;
+    scannerStarting =
+      true;
 
 
     const cameraError =
@@ -2009,13 +2735,16 @@
 
 
       /*
-       * HTTPS es obligatorio para getUserMedia.
+       * La cámara requiere HTTPS.
        */
 
       if(
-        location.protocol !== 'https:' &&
-        location.hostname !== 'localhost' &&
-        location.hostname !== '127.0.0.1'
+        location.protocol !==
+          'https:' &&
+        location.hostname !==
+          'localhost' &&
+        location.hostname !==
+          '127.0.0.1'
       ){
 
         throw new Error(
@@ -2029,39 +2758,64 @@
 
 
       /*
-       * Muy importante para iPhone:
-       * buscar las cámaras después de la
-       * interacción del usuario.
+       * Para iPhone buscamos primero
+       * la cámara trasera.
+       *
+       * Para Android también intentamos
+       * encontrarla, pero tenemos fallback
+       * a facingMode.
        */
 
       selectedCameraId =
         await findBackCamera();
 
 
-      prepareVideoForIOS();
+      /*
+       * Preparar video antes de start().
+       */
+
+      watchVideoForIOS();
 
 
       const scannerConfig = {
 
-        fps: isIOS ? 12 : 10,
+        /*
+         * Android conserva 10 FPS.
+         * iPhone usa 12 para mejorar
+         * la cantidad de muestras.
+         */
 
-        qrbox: getScanBox,
+        fps:
+          isIOS
+            ? 12
+            : 10,
 
-        aspectRatio: 1.7777778,
+
+        /*
+         * Área específica para códigos
+         * de barras largos.
+         */
+
+        qrbox:
+          getScanBox,
+
+
+        /*
+         * No hacemos espejo.
+         */
 
         disableFlip:false
 
       };
 
 
-      /*
-       * PRIMER INTENTO
-       *
-       * Si tenemos ID de cámara,
-       * utilizamos directamente esa cámara.
-       */
+      /* =====================================================
+         PRIMER INTENTO: ID DE CÁMARA
+      ===================================================== */
 
-      if(selectedCameraId){
+      if(
+        selectedCameraId
+      ){
 
         try{
 
@@ -2077,15 +2831,19 @@
 
           );
 
-          scannerStarting = false;
+
+          scannerStarting =
+            false;
+
 
           return;
 
-        }catch(firstCameraError){
+
+        }catch(firstError){
 
           console.warn(
-            "Fallo iniciando cámara por ID:",
-            firstCameraError
+            "Falló inicio por ID de cámara:",
+            firstError
           );
 
         }
@@ -2093,14 +2851,9 @@
       }
 
 
-      /*
-       * SEGUNDO INTENTO
-       *
-       * facingMode environment.
-       *
-       * Esto mantiene el comportamiento
-       * original de Android.
-       */
+      /* =====================================================
+         SEGUNDO INTENTO: FACING MODE
+      ===================================================== */
 
       await html5QrCode.start(
 
@@ -2119,24 +2872,28 @@
       );
 
 
-      scannerStarting = false;
+      scannerStarting =
+        false;
 
 
     }catch(err){
 
       console.error(err);
 
+
       showDebugError(
         "No se pudo iniciar la cámara: " +
         (
-          err && err.message
+          err &&
+          err.message
             ? err.message
             : err
         )
       );
 
 
-      scannerStarting = false;
+      scannerStarting =
+        false;
 
 
       cameraError.classList.add(
@@ -2145,8 +2902,8 @@
 
 
       /*
-       * En iOS mostramos nuevamente
-       * el botón de activación.
+       * En iPhone volvemos a mostrar
+       * el botón.
        */
 
       if(isIOS){
@@ -2194,9 +2951,11 @@
       </div>
 
       <div class="ios-description">
+
         Safari necesita que autorices
         la cámara para escanear los
         códigos de barras.
+
       </div>
 
       <button id="ios-tap-start-btn">
@@ -2243,6 +3002,7 @@
         'camera-error'
       );
 
+
     cameraError.classList.remove(
       'show'
     );
@@ -2269,17 +3029,16 @@
 
     /*
      * El catálogo se carga igual
-     * en Android y iPhone.
+     * para todos los dispositivos.
      */
 
     loadCatalog();
 
 
     /*
-     * ANDROID / OTROS
+     * ANDROID:
      *
-     * Conservamos el comportamiento
-     * automático original.
+     * Mantiene inicio automático.
      */
 
     if(!isIOS){
@@ -2290,16 +3049,16 @@
 
 
     /*
-     * iPHONE / iPAD
+     * IPHONE / IPAD:
      *
-     * No solicitamos la cámara al cargar.
-     * Esperamos una interacción explícita.
+     * Esperamos interacción del usuario.
      */
 
     if(isIOS){
 
       statusText.textContent =
         "toca para activar cámara";
+
 
       showIOSStartOverlay();
 
@@ -2309,7 +3068,7 @@
 
 
   /* =========================================================
-     ARRANCAR APP
+     ARRANCAR
   ========================================================= */
 
   initializeApp();

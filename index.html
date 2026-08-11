@@ -774,7 +774,10 @@
   function closeTicket(){
     document.getElementById('ticket').classList.remove('show');
     document.getElementById('ticket-scrim').classList.remove('show');
-    setTimeout(() => { scannerLocked = false; }, 200);
+    setTimeout(() => {
+      scannerLocked = false;
+      triggerReFocus(); // iOS no reenfoca solo tras el primer escaneo: forzamos reenfoque
+    }, 200);
   }
 
   // ---------- Scanner ----------

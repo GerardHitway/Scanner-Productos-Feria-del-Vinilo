@@ -491,7 +491,7 @@
       <div class="scanline"></div>
     </div>
   </div>
-  <div class="hint">Apunta al código de barras</div>
+  <div class="hint">Apunta al código de barras · toca para enfocar</div>
 
   <div id="camera-error">
     <p>No pudimos acceder a la cámara.<br>Revisa los permisos del navegador y vuelve a intentar.</p>
@@ -796,6 +796,21 @@
     showTicket(row, sku);
   }
 
+  // iOS no reenfoca la cámara automáticamente después del primer código
+  // detectado, se queda "clavada" en esa distancia. Forzamos focusMode
+  // continuo cada vez que hace falta (tap manual o tras cerrar el ticket).
+  async function triggerReFocus() {
+    if (!html5QrCode) return;
+    try {
+      await html5QrCode.applyVideoConstraints({
+        advanced: [{ focusMode: "continuous" }]
+      });
+    } catch (e) {
+      // Algunos iPhones no exponen control de foco por software; se ignora.
+      console.log("Refocus no soportado:", e);
+    }
+  }
+
   // Fuerza playsinline/muted en el <video> apenas se crea (crítico en iOS Safari,
   // si no, el video puede intentar fullscreen nativo y la app se ve en blanco)
   function watchVideoForIOS(){
@@ -855,12 +870,31 @@
       // cuando arranca la cámara, un qrbox de tamaño fijo (280x160) hace
       // que la librería falle en silencio. Escaneando el frame completo
       // se elimina ese punto de falla.
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10 },
-        onScanSuccess,
-        () => {}
-      );
+      try {
+        // iOS suele entregar una resolución baja por defecto, insuficiente
+        // para leer líneas finas de un código de barras. Pedimos algo más
+        // alto; si el dispositivo no lo soporta, probamos sin esa restricción.
+        await html5QrCode.start(
+          {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          { fps: 10 },
+          onScanSuccess,
+          () => {}
+        );
+      } catch (resErr) {
+        showDebugError("Fallo con resolución alta, reintentando estándar: " + resErr.message);
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10 },
+          onScanSuccess,
+          () => {}
+        );
+      }
+
+      triggerReFocus(); // intento inicial de foco continuo
 
     } catch (err) {
       console.error(err);
@@ -869,6 +903,17 @@
       showTapToStartOverlay(startScanner);
     }
   }
+
+  // Toque en el visor = reenfoque manual (respaldo si el automático no alcanza)
+  document.getElementById('scanner-wrap').addEventListener('click', () => {
+    if (scannerLocked) return;
+    const hint = document.querySelector('.hint');
+    const prevText = hint.textContent;
+    hint.textContent = "Enfocando…";
+    triggerReFocus().finally(() => {
+      setTimeout(() => { hint.textContent = prevText; }, 800);
+    });
+  });
 
   loadCatalog();
   startScanner();

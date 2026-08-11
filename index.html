@@ -30,7 +30,7 @@
 
   html,body{
     height:100%;
-    height:100dvh; /* iOS Safari: la barra de direcciones dinámica rompe 100vh/100% */
+    height:100dvh;
   }
 
   body{
@@ -43,7 +43,6 @@
     flex-direction:column;
   }
 
-  /* ---------- Header ---------- */
   header{
     padding:16px 20px 12px;
     display:flex;
@@ -295,7 +294,6 @@
     border-color:#5fae7a;
   }
 
-  /* ---------- Cart bar ---------- */
   #cart-bar{
     position:fixed;
     left:16px; right:16px;
@@ -519,13 +517,24 @@
     }
     box.textContent += (box.textContent ? "\n---\n" : "") + msg;
   }
+  function errText(err){
+    if (!err) return "(error vacío)";
+    if (typeof err === "string") return err;
+    if (err.message) return err.message;
+    try { return JSON.stringify(err); } catch(e) { return String(err); }
+  }
   window.addEventListener('error', (e) => {
     showDebugError("JS ERROR: " + e.message + " (línea " + e.lineno + ")");
   });
   window.addEventListener('unhandledrejection', (e) => {
-    showDebugError("PROMISE ERROR: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    showDebugError("PROMISE ERROR: " + errText(e.reason));
   });
   // ==========================================
+
+  // Solo aplicamos ajustes de resolución/qrbox en iOS. Android sigue
+  // exactamente igual a como funciona hoy, sin tocarlo.
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   // ======= CONFIGURACIÓN =======
   const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCTJ02RhdYcZqjlrKneeA7IUVq9TT-jhGAVRRY9X6XKIy038KNtfw1Tamao2yMyA/pub?gid=540197870&single=true&output=csv";
@@ -582,7 +591,7 @@
       statusText.textContent = "";
     }catch(err){
       console.error(err);
-      showDebugError("Error cargando catálogo: " + err.message);
+      showDebugError("Error cargando catálogo: " + errText(err));
       statusDot.className = "error";
       statusText.textContent = "error al cargar catálogo";
     }
@@ -774,7 +783,10 @@
   function closeTicket(){
     document.getElementById('ticket').classList.remove('show');
     document.getElementById('ticket-scrim').classList.remove('show');
-    setTimeout(() => { scannerLocked = false; }, 200);
+    setTimeout(() => {
+      scannerLocked = false;
+      if (isIOS) triggerReFocus();
+    }, 200);
   }
 
   // ---------- Scanner ----------
@@ -791,6 +803,17 @@
     const sku = normalizeSku(decodedText);
     const row = catalogIndex[sku];
     showTicket(row, sku);
+  }
+
+  // Reenfoque — solo relevante en iOS. Solo ajusta constraints sobre el
+  // track ya activo, nunca vuelve a llamar start(), así que es seguro.
+  async function triggerReFocus() {
+    if (!html5QrCode) return;
+    try {
+      await html5QrCode.applyVideoConstraints({ advanced: [{ focusMode: "continuous" }] });
+    } catch (e) {
+      console.log("Refocus no soportado:", e);
+    }
   }
 
   // Fuerza playsinline/muted en el <video> apenas se crea (crítico en iOS Safari,
@@ -848,24 +871,51 @@
 
       watchVideoForIOS();
 
-      // Sin qrbox fijo: en iOS, si el contenedor aún no tiene alto real
-      // cuando arranca la cámara, un qrbox de tamaño fijo (280x160) hace
-      // que la librería falle en silencio. Escaneando el frame completo
-      // se elimina ese punto de falla.
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10 },
-        onScanSuccess,
-        () => {}
-      );
+      // Android: sin cambios, tal cual funciona hoy (facingMode únicamente, sin qrbox).
+      // iOS: Safari no tiene el detector nativo rápido (BarcodeDetector no
+      // existe ahí), cae al decodificador en JS, que necesita más resolución
+      // para distinguir las líneas finas de un código de barras. Por eso SOLO
+      // en iOS pedimos una resolución más alta (como sugerencia "ideal", nunca
+      // como requisito estricto, no puede fallar duro) y usamos un qrbox
+      // calculado dinámicamente en vez de un tamaño fijo en píxeles.
+      const cameraConfig = isIOS
+        ? { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+        : { facingMode: "environment" };
+
+      const scanConfig = isIOS
+        ? {
+            fps: 10,
+            qrbox: (viewfinderWidth, viewfinderHeight) => {
+              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+              const boxWidth = Math.floor(Math.min(viewfinderWidth * 0.85, minEdge * 1.4));
+              const boxHeight = Math.floor(boxWidth * 0.45);
+              return { width: boxWidth, height: boxHeight };
+            }
+          }
+        : { fps: 10 };
+
+      await html5QrCode.start(cameraConfig, scanConfig, onScanSuccess, () => {});
+
+      if (isIOS) triggerReFocus();
 
     } catch (err) {
       console.error(err);
-      showDebugError("No se pudo iniciar la cámara: " + err.message);
+      showDebugError("No se pudo iniciar la cámara: " + errText(err));
       document.getElementById('camera-error').classList.add('show');
       showTapToStartOverlay(startScanner);
     }
   }
+
+  // Toque en el visor = reenfoque manual en iOS (respaldo si el automático no alcanza)
+  document.getElementById('scanner-wrap').addEventListener('click', () => {
+    if (!isIOS || scannerLocked) return;
+    const hint = document.querySelector('.hint');
+    const prevText = hint.textContent;
+    hint.textContent = "Enfocando…";
+    triggerReFocus().finally(() => {
+      setTimeout(() => { hint.textContent = prevText; }, 800);
+    });
+  });
 
   loadCatalog();
   startScanner();

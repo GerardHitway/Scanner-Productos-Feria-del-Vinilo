@@ -490,6 +490,12 @@
   </div>
   <div class="hint">Apunta al código de barras</div>
 
+  <div id="zoom-wrap" style="display:none; position:absolute; bottom:70px; left:50%; transform:translateX(-50%); z-index:6; gap:8px;">
+    <button class="zoom-btn" data-zoom="1" style="background:rgba(20,16,14,.85); color:#f2e9de; border:1px solid #3a3128; border-radius:999px; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:12px;">1x</button>
+    <button class="zoom-btn" data-zoom="2" style="background:rgba(20,16,14,.85); color:#f2e9de; border:1px solid #3a3128; border-radius:999px; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:12px;">2x</button>
+    <button class="zoom-btn" data-zoom="3" style="background:rgba(20,16,14,.85); color:#f2e9de; border:1px solid #3a3128; border-radius:999px; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:12px;">3x</button>
+  </div>
+
   <div id="camera-error">
     <p>No pudimos acceder a la cámara.<br>Revisa los permisos del navegador y vuelve a intentar.</p>
     <button onclick="location.reload()">Reintentar</button>
@@ -773,18 +779,58 @@
   }
 
   const scanConfig = {
-    fps: 10,
-    qrbox: { width: 300, height: 180 },
+    fps: 8,
+    qrbox: { width: 320, height: 140 }, // más ancho y bajo: se parece a la forma real de un código de barras
     aspectRatio: 1.777,
     disableFlip: false
   };
 
-  // Elige la mejor cámara trasera disponible, evitando lentes
-  // ultra gran angular / teleobjetivo (que en iPhone enfocan mal de cerca).
+  function buildVideoConstraints(deviceId){
+    return {
+      deviceId: deviceId ? { exact: deviceId } : undefined,
+      facingMode: deviceId ? undefined : "environment",
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      advanced: [{ focusMode: "continuous" }]
+    };
+  }
+
   function pickBestBackCamera(devices){
     const backCams = devices.filter(d => /back|rear|trasera|environment/i.test(d.label));
     const primary = backCams.find(d => !/ultra ?wide|tele|zoom/i.test(d.label));
     return primary || backCams[0] || devices[devices.length - 1] || devices[0];
+  }
+
+  // ---------- Zoom digital (ayuda mucho en lentes sin macro, tipo iPhone) ----------
+  function setupZoomControls(){
+    const wrap = document.getElementById('zoom-wrap');
+    try{
+      const track = html5QrCode.getRunningTrackCameraCapabilities
+        ? null
+        : null;
+      const videoEl = document.querySelector('#reader video');
+      if(!videoEl || !videoEl.srcObject) return;
+      const streamTrack = videoEl.srcObject.getVideoTracks()[0];
+      if(!streamTrack) return;
+      const capabilities = streamTrack.getCapabilities ? streamTrack.getCapabilities() : {};
+      if(!capabilities.zoom){
+        wrap.style.display = 'none';
+        return;
+      }
+      wrap.style.display = 'flex';
+      wrap.querySelectorAll('.zoom-btn').forEach(btn => {
+        btn.onclick = () => {
+          const z = parseFloat(btn.dataset.zoom);
+          const clamped = Math.min(Math.max(z, capabilities.zoom.min), capabilities.zoom.max);
+          streamTrack.applyConstraints({ advanced: [{ zoom: clamped }] }).catch(err => console.error(err));
+          wrap.querySelectorAll('.zoom-btn').forEach(b => b.style.opacity = '.55');
+          btn.style.opacity = '1';
+        };
+      });
+      wrap.querySelector('.zoom-btn[data-zoom="1"]').style.opacity = '1';
+    }catch(err){
+      console.error('zoom no soportado', err);
+    }
   }
 
   function populateCameraSelect(devices, selectedId){
@@ -805,7 +851,9 @@
     if(!html5QrCode || cameraId === currentCameraId) return;
     html5QrCode.stop().then(() => {
       currentCameraId = cameraId;
-      return html5QrCode.start(cameraId, scanConfig, onScanSuccess, () => {});
+      return html5QrCode.start(buildVideoConstraints(cameraId), scanConfig, onScanSuccess, () => {});
+    }).then(() => {
+      setTimeout(setupZoomControls, 400);
     }).catch(err => console.error(err));
   }
 
@@ -830,16 +878,21 @@
       currentCameraId = chosen.id;
       populateCameraSelect(devices, chosen.id);
 
-      return html5QrCode.start(chosen.id, scanConfig, onScanSuccess, () => {});
+      return html5QrCode.start(buildVideoConstraints(chosen.id), scanConfig, onScanSuccess, () => {});
+    }).then(() => {
+      if(html5QrCode) setTimeout(setupZoomControls, 400);
     }).catch(err => {
       console.error(err);
-
+      // Fallback: en iOS a veces getCameras() no trae labels hasta que
+      // el usuario ya dio permiso una vez. Probamos con facingMode directo.
       html5QrCode.start(
-        { facingMode: "environment" },
+        buildVideoConstraints(null),
         scanConfig,
         onScanSuccess,
         () => {}
-      ).catch(err2 => {
+      ).then(() => {
+        setTimeout(setupZoomControls, 400);
+      }).catch(err2 => {
         console.error(err2);
         document.getElementById('camera-error').classList.add('show');
       });

@@ -26,7 +26,10 @@
     --radius:        18px;
   }
 
-  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  *{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+  }
 
   html,body{
     height:100%;
@@ -43,6 +46,8 @@
     flex-direction:column;
   }
 
+  /* ---------- Header ---------- */
+
   header{
     padding:16px 20px 12px;
     display:flex;
@@ -54,6 +59,7 @@
     z-index:5;
     background:var(--bg);
   }
+
   header .eyebrow{
     font-family:'JetBrains Mono',monospace;
     font-size:11px;
@@ -61,6 +67,7 @@
     text-transform:uppercase;
     color:var(--accent);
   }
+
   header h1{
     font-family:'Fraunces',serif;
     font-weight:600;
@@ -68,15 +75,34 @@
     margin:2px 0 0;
     letter-spacing:-.01em;
   }
+
   #status-dot{
-    width:8px; height:8px; border-radius:50%;
+    width:8px;
+    height:8px;
+    border-radius:50%;
     background:var(--text-muted);
     flex-shrink:0;
     transition:background .3s;
   }
-  #status-dot.ready{ background:#5fae7a; }
-  #status-dot.error{ background:var(--error); }
-  .status-wrap{ display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted); }
+
+  #status-dot.ready{
+    background:#5fae7a;
+  }
+
+  #status-dot.error{
+    background:var(--error);
+  }
+
+  .status-wrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--text-muted);
+  }
+
+  /* ---------- Scanner ---------- */
 
   #scanner-wrap{
     position:relative;
@@ -84,50 +110,125 @@
     min-height:0;
     background:#000;
   }
-  #reader{ width:100%; height:100%; }
-  #reader video{ width:100% !important; height:100% !important; object-fit:cover; }
 
-  #reader__dashboard, #reader__header_message, #reader__filescan_input, #reader__camera_selection{ display:none !important; }
-  #reader__scan_region{ border:none !important; }
-  #reader__scan_region img{ display:none !important; }
+  #reader{
+    width:100%;
+    height:100%;
+  }
+
+  #reader video{
+    width:100% !important;
+    height:100% !important;
+    object-fit:cover !important;
+
+    /* iOS Safari */
+    display:block;
+    -webkit-transform:translateZ(0);
+    transform:translateZ(0);
+  }
+
+  #reader__dashboard,
+  #reader__header_message,
+  #reader__filescan_input,
+  #reader__camera_selection{
+    display:none !important;
+  }
+
+  #reader__scan_region{
+    border:none !important;
+  }
+
+  #reader__scan_region img{
+    display:none !important;
+  }
 
   .viewfinder{
-    position:absolute; inset:0;
+    position:absolute;
+    inset:0;
     pointer-events:none;
     display:flex;
     align-items:center;
     justify-content:center;
   }
+
   .viewfinder .frame{
-    width:78%;
-    max-width:420px;
-    aspect-ratio:16/9;
+    width:88%;
+    max-width:500px;
+    aspect-ratio:2.4/1;
     position:relative;
   }
+
   .viewfinder .corner{
     position:absolute;
-    width:28px; height:28px;
+    width:28px;
+    height:28px;
     border:3px solid var(--accent);
   }
-  .viewfinder .corner.tl{ top:0; left:0; border-right:none; border-bottom:none; border-top-left-radius:8px; }
-  .viewfinder .corner.tr{ top:0; right:0; border-left:none; border-bottom:none; border-top-right-radius:8px; }
-  .viewfinder .corner.bl{ bottom:0; left:0; border-right:none; border-top:none; border-bottom-left-radius:8px; }
-  .viewfinder .corner.br{ bottom:0; right:0; border-left:none; border-top:none; border-bottom-right-radius:8px; }
+
+  .viewfinder .corner.tl{
+    top:0;
+    left:0;
+    border-right:none;
+    border-bottom:none;
+    border-top-left-radius:8px;
+  }
+
+  .viewfinder .corner.tr{
+    top:0;
+    right:0;
+    border-left:none;
+    border-bottom:none;
+    border-top-right-radius:8px;
+  }
+
+  .viewfinder .corner.bl{
+    bottom:0;
+    left:0;
+    border-right:none;
+    border-top:none;
+    border-bottom-left-radius:8px;
+  }
+
+  .viewfinder .corner.br{
+    bottom:0;
+    right:0;
+    border-left:none;
+    border-top:none;
+    border-bottom-right-radius:8px;
+  }
+
   .viewfinder .scanline{
     position:absolute;
-    left:6%; right:6%;
+    left:6%;
+    right:6%;
     height:2px;
-    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    background:linear-gradient(
+      90deg,
+      transparent,
+      var(--accent),
+      transparent
+    );
     box-shadow:0 0 8px 1px var(--accent);
     animation:sweep 2.2s ease-in-out infinite;
   }
+
   @keyframes sweep{
-    0%,100%{ top:8%; opacity:.9; }
-    50%{ top:92%; opacity:.5; }
+    0%,100%{
+      top:8%;
+      opacity:.9;
+    }
+
+    50%{
+      top:92%;
+      opacity:.5;
+    }
   }
+
   .hint{
     position:absolute;
-    bottom:22px; left:0; right:0;
+    bottom:22px;
+    left:0;
+    right:0;
     text-align:center;
     font-family:'JetBrains Mono',monospace;
     font-size:11.5px;
@@ -136,8 +237,11 @@
     text-shadow:0 1px 4px rgba(0,0,0,.8);
   }
 
+  /* ---------- Camera error ---------- */
+
   #camera-error{
-    position:absolute; inset:0;
+    position:absolute;
+    inset:0;
     display:none;
     flex-direction:column;
     align-items:center;
@@ -146,9 +250,20 @@
     padding:32px;
     text-align:center;
     background:var(--bg);
+    z-index:20;
   }
-  #camera-error.show{ display:flex; }
-  #camera-error p{ color:var(--text-muted); font-size:14px; line-height:1.5; margin:0; }
+
+  #camera-error.show{
+    display:flex;
+  }
+
+  #camera-error p{
+    color:var(--text-muted);
+    font-size:14px;
+    line-height:1.5;
+    margin:0;
+  }
+
   #camera-error button{
     background:var(--accent);
     color:#fff;
@@ -160,19 +275,69 @@
     font-size:14px;
   }
 
+  /* ---------- iOS start overlay ---------- */
+
+  #ios-tap-start{
+    position:fixed;
+    inset:0;
+    z-index:9998;
+    background:rgba(0,0,0,.92);
+    color:#fff;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:24px;
+    font-family:'Inter',sans-serif;
+  }
+
+  #ios-tap-start .ios-title{
+    font-family:'Fraunces',serif;
+    font-size:24px;
+    margin-bottom:8px;
+  }
+
+  #ios-tap-start .ios-description{
+    color:#cfc4b7;
+    font-size:14px;
+    line-height:1.5;
+    max-width:320px;
+  }
+
+  #ios-tap-start button{
+    margin-top:20px;
+    padding:14px 28px;
+    font-size:15px;
+    border-radius:999px;
+    border:none;
+    background:var(--accent);
+    color:#fff;
+    font-weight:600;
+  }
+
+  /* ---------- Ticket ---------- */
+
   #ticket-scrim{
-    position:fixed; inset:0;
+    position:fixed;
+    inset:0;
     background:rgba(0,0,0,.55);
     opacity:0;
     pointer-events:none;
     transition:opacity .25s ease;
     z-index:8;
   }
-  #ticket-scrim.show{ opacity:1; pointer-events:auto; }
+
+  #ticket-scrim.show{
+    opacity:1;
+    pointer-events:auto;
+  }
 
   #ticket{
     position:fixed;
-    left:0; right:0; bottom:0;
+    left:0;
+    right:0;
+    bottom:0;
     z-index:9;
     background:var(--surface);
     border-top-left-radius:24px;
@@ -184,12 +349,16 @@
     max-height:78vh;
     overflow-y:auto;
   }
-  #ticket.show{ transform:translateY(0); }
+
+  #ticket.show{
+    transform:translateY(0);
+  }
 
   #ticket::before{
     content:"";
     display:block;
-    width:36px; height:4px;
+    width:36px;
+    height:4px;
     background:var(--line);
     border-radius:3px;
     margin:0 auto 18px;
@@ -200,29 +369,40 @@
     gap:16px;
     align-items:flex-start;
   }
+
   .ticket-img{
-    width:92px; height:92px;
+    width:92px;
+    height:92px;
     border-radius:10px;
     object-fit:cover;
     background:var(--surface-2);
     border:1px solid var(--line);
     flex-shrink:0;
   }
+
   .ticket-img.placeholder{
-    display:flex; align-items:center; justify-content:center;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     color:var(--text-muted);
     font-size:10px;
     font-family:'JetBrains Mono',monospace;
     text-align:center;
     padding:6px;
   }
-  .ticket-main{ min-width:0; flex:1; }
+
+  .ticket-main{
+    min-width:0;
+    flex:1;
+  }
+
   .ticket-sku{
     font-family:'JetBrains Mono',monospace;
     font-size:11px;
     color:var(--accent);
     letter-spacing:.05em;
   }
+
   .ticket-title{
     font-family:'Fraunces',serif;
     font-weight:600;
@@ -230,6 +410,7 @@
     line-height:1.2;
     margin:4px 0 2px;
   }
+
   .ticket-artist{
     color:var(--text-muted);
     font-size:14px;
@@ -245,6 +426,7 @@
     display:flex;
     gap:12px;
   }
+
   .price-card{
     flex:1;
     background:var(--surface-2);
@@ -252,6 +434,7 @@
     border-radius:12px;
     padding:12px 14px;
   }
+
   .price-card .label{
     font-family:'JetBrains Mono',monospace;
     font-size:10px;
@@ -259,6 +442,7 @@
     text-transform:uppercase;
     color:var(--text-muted);
   }
+
   .price-card .value{
     font-family:'JetBrains Mono',monospace;
     font-weight:700;
@@ -266,14 +450,19 @@
     color:var(--gold);
     margin-top:4px;
   }
-  .price-card.club .value{ color:var(--accent); }
+
+  .price-card.club .value{
+    color:var(--accent);
+  }
 
   .ticket-actions{
     display:flex;
     gap:10px;
     margin-top:20px;
   }
-  #ticket-close, #ticket-save{
+
+  #ticket-close,
+  #ticket-save{
     flex:1;
     background:transparent;
     border:1px solid var(--line);
@@ -284,19 +473,24 @@
     font-weight:600;
     font-size:14px;
   }
+
   #ticket-save{
     background:var(--accent);
     border-color:var(--accent);
     color:#fff;
   }
+
   #ticket-save.saved{
     background:#5fae7a;
     border-color:#5fae7a;
   }
 
+  /* ---------- Cart ---------- */
+
   #cart-bar{
     position:fixed;
-    left:16px; right:16px;
+    left:16px;
+    right:16px;
     bottom:calc(16px + env(safe-area-inset-bottom));
     z-index:7;
     background:var(--surface);
@@ -308,12 +502,17 @@
     justify-content:space-between;
     box-shadow:0 8px 24px rgba(0,0,0,.45);
   }
-  #cart-bar.show{ display:flex; }
+
+  #cart-bar.show{
+    display:flex;
+  }
+
   #cart-bar .cart-count{
     font-family:'JetBrains Mono',monospace;
     font-size:11px;
     color:var(--text-muted);
   }
+
   #cart-bar .cart-total{
     font-family:'JetBrains Mono',monospace;
     font-weight:700;
@@ -323,7 +522,9 @@
 
   #cart-sheet{
     position:fixed;
-    left:0; right:0; bottom:0;
+    left:0;
+    right:0;
+    bottom:0;
     z-index:9;
     background:var(--surface);
     border-top-left-radius:24px;
@@ -335,21 +536,28 @@
     max-height:78vh;
     overflow-y:auto;
   }
-  #cart-sheet.show{ transform:translateY(0); }
+
+  #cart-sheet.show{
+    transform:translateY(0);
+  }
+
   #cart-sheet::before{
     content:"";
     display:block;
-    width:36px; height:4px;
+    width:36px;
+    height:4px;
     background:var(--line);
     border-radius:3px;
     margin:0 auto 16px;
   }
+
   #cart-sheet h2{
     font-family:'Fraunces',serif;
     font-size:18px;
     font-weight:600;
     margin:0 0 14px;
   }
+
   .cart-item{
     display:flex;
     align-items:center;
@@ -358,7 +566,11 @@
     padding:10px 0;
     border-bottom:1px solid var(--line);
   }
-  .cart-item .info{ min-width:0; }
+
+  .cart-item .info{
+    min-width:0;
+  }
+
   .cart-item .info .t{
     font-size:14px;
     font-weight:600;
@@ -366,11 +578,13 @@
     overflow:hidden;
     text-overflow:ellipsis;
   }
+
   .cart-item .info .s{
     font-family:'JetBrains Mono',monospace;
     font-size:10.5px;
     color:var(--text-muted);
   }
+
   .cart-item .p{
     font-family:'JetBrains Mono',monospace;
     color:var(--gold);
@@ -379,11 +593,13 @@
     text-align:right;
     line-height:1.5;
   }
+
   .cart-item .p .club{
     color:var(--accent);
     display:block;
     font-size:11.5px;
   }
+
   .cart-item .rm{
     background:none;
     border:none;
@@ -397,6 +613,7 @@
   .totals-block{
     margin-top:6px;
   }
+
   .cart-total-row{
     display:flex;
     justify-content:space-between;
@@ -405,12 +622,28 @@
     font-family:'JetBrains Mono',monospace;
     border-bottom:1px solid var(--line);
   }
-  .cart-total-row:last-of-type{ border-bottom:none; }
-  .cart-total-row .label{ color:var(--text-muted); font-size:12.5px; }
-  .cart-total-row .value{ font-size:19px; font-weight:700; color:var(--gold); }
-  .cart-total-row.club .value{ color:var(--accent); }
 
-  #cart-clear, #cart-close{
+  .cart-total-row:last-of-type{
+    border-bottom:none;
+  }
+
+  .cart-total-row .label{
+    color:var(--text-muted);
+    font-size:12.5px;
+  }
+
+  .cart-total-row .value{
+    font-size:19px;
+    font-weight:700;
+    color:var(--gold);
+  }
+
+  .cart-total-row.club .value{
+    color:var(--accent);
+  }
+
+  #cart-clear,
+  #cart-close{
     width:100%;
     padding:13px;
     border-radius:12px;
@@ -419,18 +652,23 @@
     font-size:14px;
     margin-top:10px;
   }
+
   #cart-close{
     background:var(--accent);
     border:1px solid var(--accent);
     color:#fff;
   }
+
   #cart-clear{
     background:transparent;
     border:1px solid var(--line);
     color:var(--error);
   }
 
-  .not-found .ticket-title{ color:var(--error); }
+  .not-found .ticket-title{
+    color:var(--error);
+  }
+
   .not-found-icon{
     font-family:'JetBrains Mono',monospace;
     font-size:34px;
@@ -439,31 +677,26 @@
     margin-bottom:6px;
   }
 
-  #ios-tap-start{
-    position: fixed; inset: 0; z-index: 9998;
-    background: rgba(0,0,0,0.9); color: #fff;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; padding: 24px; font-family: 'Inter', sans-serif;
-  }
-  #ios-tap-start button{
-    margin-top:16px;
-    padding:13px 26px;
-    font-size:15px;
-    border-radius:999px;
-    border:none;
-    background:var(--accent);
-    color:#fff;
-    font-weight:600;
-  }
+  /* ---------- Debug ---------- */
 
   #debug-error-box{
-    position:fixed; top:0; left:0; right:0; z-index:99999;
-    background:#c0453a; color:#fff; font-family:'JetBrains Mono',monospace;
-    font-size:11px; padding:10px; white-space:pre-wrap;
-    max-height:40vh; overflow:auto;
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:99999;
+    background:#c0453a;
+    color:#fff;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    padding:10px;
+    white-space:pre-wrap;
+    max-height:40vh;
+    overflow:auto;
   }
 </style>
 </head>
+
 <body>
 
 <header>
@@ -471,6 +704,7 @@
     <div class="eyebrow">Punto de venta</div>
     <h1>Escanear producto</h1>
   </div>
+
   <div class="status-wrap">
     <span id="status-dot"></span>
     <span id="status-text">cargando catálogo…</span>
@@ -478,6 +712,7 @@
 </header>
 
 <div id="scanner-wrap">
+
   <div id="reader"></div>
 
   <div class="viewfinder">
@@ -489,12 +724,20 @@
       <div class="scanline"></div>
     </div>
   </div>
+
   <div class="hint">Apunta al código de barras</div>
 
   <div id="camera-error">
-    <p>No pudimos acceder a la cámara.<br>Revisa los permisos del navegador y vuelve a intentar.</p>
-    <button onclick="location.reload()">Reintentar</button>
+    <p>
+      No pudimos acceder a la cámara.<br>
+      Revisa los permisos del navegador y vuelve a intentar.
+    </p>
+
+    <button onclick="retryCamera()">
+      Reintentar
+    </button>
   </div>
+
 </div>
 
 <div id="ticket-scrim" onclick="closeTicket()"></div>
@@ -504,422 +747,1583 @@
   <span class="cart-count" id="cart-count">0 productos</span>
   <span class="cart-total" id="cart-total">Ver Total</span>
 </div>
+
 <div id="cart-sheet"></div>
 
 <script>
-  // ======= DEBUG VISIBLE EN PANTALLA =======
+
+  /* =========================================================
+     DEBUG
+  ========================================================= */
+
   function showDebugError(msg){
+
     let box = document.getElementById('debug-error-box');
+
     if(!box){
+
       box = document.createElement('div');
+
       box.id = 'debug-error-box';
+
       document.body.appendChild(box);
     }
-    box.textContent += (box.textContent ? "\n---\n" : "") + msg;
+
+    box.textContent +=
+      (box.textContent ? "\n---\n" : "") + msg;
   }
-  function errText(err){
-    if (!err) return "(error vacío)";
-    if (typeof err === "string") return err;
-    if (err.message) return err.message;
-    try { return JSON.stringify(err); } catch(e) { return String(err); }
-  }
+
   window.addEventListener('error', (e) => {
-    showDebugError("JS ERROR: " + e.message + " (línea " + e.lineno + ")");
+
+    showDebugError(
+      "JS ERROR: " +
+      e.message +
+      " (línea " +
+      e.lineno +
+      ")"
+    );
+
   });
+
   window.addEventListener('unhandledrejection', (e) => {
-    showDebugError("PROMISE ERROR: " + errText(e.reason));
+
+    showDebugError(
+      "PROMISE ERROR: " +
+      (
+        e.reason &&
+        e.reason.message
+          ? e.reason.message
+          : e.reason
+      )
+    );
+
   });
-  // ==========================================
 
-  // Solo aplicamos ajustes de resolución/qrbox en iOS. Android sigue
-  // exactamente igual a como funciona hoy, sin tocarlo.
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // ======= CONFIGURACIÓN =======
-  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCTJ02RhdYcZqjlrKneeA7IUVq9TT-jhGAVRRY9X6XKIy038KNtfw1Tamao2yMyA/pub?gid=540197870&single=true&output=csv";
+  /* =========================================================
+     CONFIGURACIÓN
+  ========================================================= */
+
+  const SHEET_CSV_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCTJ02RhdYcZqjlrKneeA7IUVq9TT-jhGAVRRY9X6XKIy038KNtfw1Tamao2yMyA/pub?gid=540197870&single=true&output=csv";
+
 
   const COLS = {
-    sku: "SKU",
-    artista: "Artista",
-    titulo: "Título",
-    precio: "Precio",
-    precioClub: "Precio Club de lectores",
-    imagen: "Imagen"
-  };
-  // ==============================
 
-  const statusDot = document.getElementById('status-dot');
-  const statusText = document.getElementById('status-text');
+    sku: "SKU",
+
+    artista: "Artista",
+
+    titulo: "Título",
+
+    precio: "Precio",
+
+    precioClub: "Precio Club de lectores",
+
+    imagen: "Imagen"
+
+  };
+
+
+  /* =========================================================
+     DETECCIÓN DE IOS
+  ========================================================= */
+
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (
+      navigator.platform === "MacIntel" &&
+      navigator.maxTouchPoints > 1
+    );
+
+
+  const isSafari =
+    /^((?!chrome|android).)*safari/i.test(
+      navigator.userAgent
+    );
+
+
+  /* =========================================================
+     VARIABLES
+  ========================================================= */
+
+  const statusDot =
+    document.getElementById('status-dot');
+
+  const statusText =
+    document.getElementById('status-text');
+
+
   let catalogIndex = {};
+
   let catalogReady = false;
+
   let html5QrCode = null;
 
-  function normalizeSku(s){
-    return (s || "").toString().trim().toUpperCase();
-  }
+  let scannerLocked = false;
 
-  function toDirectImageUrl(url){
-    if(!url) return "";
-    url = url.trim();
-    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-    if(driveMatch){
-      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-    }
-    const driveIdMatch = url.match(/[?&]id=([^&]+)/);
-    if(driveIdMatch && url.includes('drive.google.com')){
-      return `https://drive.google.com/uc?export=view&id=${driveIdMatch[1]}`;
-    }
-    return url;
-  }
+  let scannerStarting = false;
 
-  async function loadCatalog(){
-    statusText.textContent = "cargando catálogo…";
-    statusDot.className = "";
-    try{
-      const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const csvText = await res.text();
-      const parsed = Papa.parse(csvText, { header:true, skipEmptyLines:true });
-      catalogIndex = {};
-      parsed.data.forEach(row => {
-        const sku = normalizeSku(row[COLS.sku]);
-        if(sku) catalogIndex[sku] = row;
-      });
-      catalogReady = true;
-      statusDot.className = "ready";
-      statusText.textContent = "";
-    }catch(err){
-      console.error(err);
-      showDebugError("Error cargando catálogo: " + errText(err));
-      statusDot.className = "error";
-      statusText.textContent = "error al cargar catálogo";
-    }
-  }
+  let selectedCameraId = null;
 
-  function formatPrice(v){
-    if(v === undefined || v === null || v.toString().trim() === "") return "—";
-    const cleaned = v.toString().replace(/[^\d.,-]/g, '');
-    return cleaned ? `$${cleaned}` : v;
-  }
-
-  function showTicket(row, skuScanned){
-    const ticket = document.getElementById('ticket');
-    const scrim = document.getElementById('ticket-scrim');
-
-    if(!row){
-      ticket.className = "not-found";
-      ticket.innerHTML = `
-        <div class="not-found-icon">✕</div>
-        <div class="ticket-title" style="text-align:center;">SKU no encontrado</div>
-        <div class="ticket-artist" style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; margin-top:6px;">${skuScanned}</div>
-        <div class="ticket-actions">
-          <button id="ticket-close" style="flex:1;">Seguir escaneando</button>
-        </div>
-      `;
-    } else {
-      const imgUrl = toDirectImageUrl(row[COLS.imagen]);
-      ticket.className = "";
-      ticket.innerHTML = `
-        <div class="ticket-row-top">
-          ${ imgUrl
-            ? `<img class="ticket-img" src="${imgUrl}" onerror="this.outerHTML='<div class=&quot;ticket-img placeholder&quot;>sin imagen</div>'">`
-            : `<div class="ticket-img placeholder">sin imagen</div>` }
-          <div class="ticket-main">
-            <div class="ticket-sku">${normalizeSku(row[COLS.sku])}</div>
-            <div class="ticket-title">${row[COLS.titulo] || "Sin título"}</div>
-            <div class="ticket-artist">${row[COLS.artista] || ""}</div>
-          </div>
-        </div>
-        <hr class="ticket-divider">
-        <div class="price-grid">
-          <div class="price-card">
-            <div class="label">Precio</div>
-            <div class="value">${formatPrice(row[COLS.precio])}</div>
-          </div>
-          <div class="price-card club">
-            <div class="label">Club de lectores</div>
-            <div class="value">${formatPrice(row[COLS.precioClub])}</div>
-          </div>
-        </div>
-        <div class="ticket-actions">
-          <button id="ticket-close">Seguir escaneando</button>
-          <button id="ticket-save">Guardar</button>
-        </div>
-      `;
-    }
-
-    document.getElementById('ticket-close').addEventListener('click', closeTicket);
-    const saveBtn = document.getElementById('ticket-save');
-    if(saveBtn){
-      saveBtn.addEventListener('click', () => {
-        addToCart(row);
-        saveBtn.textContent = "Guardado ✓";
-        saveBtn.classList.add('saved');
-        saveBtn.disabled = true;
-        setTimeout(closeTicket, 500);
-      });
-    }
-    ticket.classList.add('show');
-    scrim.classList.add('show');
-  }
-
-  // ---------- Carrito / suma ----------
   let cartItems = [];
-
-  function parsePrice(raw){
-    if(raw === undefined || raw === null) return 0;
-    let s = raw.toString().trim().replace(/[^\d.,]/g, '');
-    if(!s) return 0;
-    const hasDot = s.includes('.');
-    const hasComma = s.includes(',');
-    if(hasDot && hasComma){
-      s = s.replace(/\./g, '').replace(',', '.');
-    } else if(hasComma && !hasDot){
-      s = s.replace(',', '.');
-    } else if(hasDot && !hasComma){
-      const afterDot = s.split('.').pop();
-      if(afterDot.length === 3){
-        s = s.replace(/\./g, '');
-      }
-    }
-    const n = parseFloat(s);
-    return isNaN(n) ? 0 : n;
-  }
-
-  function formatCLP(n){
-    return '$' + Math.round(n).toLocaleString('es-CL');
-  }
-
-  function addToCart(row){
-    cartItems.push({
-      sku: normalizeSku(row[COLS.sku]),
-      titulo: row[COLS.titulo] || "Sin título",
-      precio: parsePrice(row[COLS.precio]),
-      precioClub: parsePrice(row[COLS.precioClub])
-    });
-    renderCartBar();
-  }
-
-  function renderCartBar(){
-    const bar = document.getElementById('cart-bar');
-    document.getElementById('cart-count').textContent =
-      `${cartItems.length} producto${cartItems.length === 1 ? '' : 's'}`;
-    document.getElementById('cart-total').textContent = "Ver Total";
-    bar.classList.toggle('show', cartItems.length > 0);
-  }
-
-  function cartTotal(mode){
-    const key = mode === 'club' ? 'precioClub' : 'precio';
-    return cartItems.reduce((sum, i) => sum + (i[key] || 0), 0);
-  }
 
   let activePriceMode = 'normal';
 
-  function renderCartSheet(){
-    const sheet = document.getElementById('cart-sheet');
-    const totalNormal = cartTotal('normal');
-    const totalClub = cartTotal('club');
-    const rows = cartItems.map((item, idx) => `
-      <div class="cart-item">
-        <div class="info">
-          <div class="t">${item.titulo}</div>
-          <div class="s">${item.sku}</div>
-        </div>
-        <div class="p">
-          ${formatCLP(item.precio)}
-          <span class="club">${formatCLP(item.precioClub)}</span>
-        </div>
-        <button class="rm" onclick="removeFromCart(${idx})">×</button>
-      </div>
-    `).join('');
-    sheet.innerHTML = `
-      <h2>Productos guardados</h2>
-      ${rows || '<p style="color:var(--text-muted); font-size:13px;">Todavía no guardaste ningún producto.</p>'}
-      <div class="totals-block">
-        <div class="cart-total-row normal" id="total-row-normal" onclick="setActivePriceMode('normal')" style="cursor:pointer;">
-          <span class="label">Total (Precio normal) ${activePriceMode === 'normal' ? '✓' : ''}</span>
-          <span class="value">${formatCLP(totalNormal)}</span>
-        </div>
-        <div class="cart-total-row club" id="total-row-club" onclick="setActivePriceMode('club')" style="cursor:pointer;">
-          <span class="label">Total (Club de lectores) ${activePriceMode === 'club' ? '✓' : ''}</span>
-          <span class="value">${formatCLP(totalClub)}</span>
-        </div>
-      </div>
-      <button id="cart-clear">Vaciar lista</button>
-      <button id="cart-close">Cerrar</button>
-    `;
-    document.getElementById('cart-close').addEventListener('click', closeCart);
-    document.getElementById('cart-clear').addEventListener('click', () => {
-      cartItems = [];
-      renderCartBar();
-      renderCartSheet();
-    });
+
+  /* =========================================================
+     CATÁLOGO
+  ========================================================= */
+
+  function normalizeSku(s){
+
+    return (s || "")
+      .toString()
+      .trim()
+      .toUpperCase();
+
   }
 
-  function setActivePriceMode(mode){
-    activePriceMode = mode;
-    renderCartSheet();
-    renderCartBar();
-  }
 
-  function removeFromCart(idx){
-    cartItems.splice(idx, 1);
-    renderCartBar();
-    renderCartSheet();
-  }
+  function toDirectImageUrl(url){
 
-  function openCart(){
-    renderCartSheet();
-    document.getElementById('cart-sheet').classList.add('show');
-    scannerLocked = true;
-  }
+    if(!url) return "";
 
-  function closeCart(){
-    document.getElementById('cart-sheet').classList.remove('show');
-    scannerLocked = false;
-  }
+    url = url.trim();
 
-  function closeTicket(){
-    document.getElementById('ticket').classList.remove('show');
-    document.getElementById('ticket-scrim').classList.remove('show');
-    setTimeout(() => {
-      scannerLocked = false;
-      if (isIOS) triggerReFocus();
-    }, 200);
-  }
+    const driveMatch =
+      url.match(
+        /drive\.google\.com\/file\/d\/([^/]+)/
+      );
 
-  // ---------- Scanner ----------
-  let scannerLocked = false;
+    if(driveMatch){
 
-  function onScanSuccess(decodedText){
-    if(scannerLocked) return;
-    if(!catalogReady){
-      statusText.textContent = "catálogo aún no cargado, espera…";
-      return;
+      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+
     }
-    scannerLocked = true;
-    if(navigator.vibrate) navigator.vibrate(60);
-    const sku = normalizeSku(decodedText);
-    const row = catalogIndex[sku];
-    showTicket(row, sku);
-  }
 
-  // Reenfoque — solo relevante en iOS. Solo ajusta constraints sobre el
-  // track ya activo, nunca vuelve a llamar start(), así que es seguro.
-  async function triggerReFocus() {
-    if (!html5QrCode) return;
-    try {
-      await html5QrCode.applyVideoConstraints({ advanced: [{ focusMode: "continuous" }] });
-    } catch (e) {
-      console.log("Refocus no soportado:", e);
+    const driveIdMatch =
+      url.match(/[?&]id=([^&]+)/);
+
+    if(
+      driveIdMatch &&
+      url.includes('drive.google.com')
+    ){
+
+      return `https://drive.google.com/uc?export=view&id=${driveIdMatch[1]}`;
+
     }
+
+    return url;
+
   }
 
-  // Fuerza playsinline/muted en el <video> apenas se crea (crítico en iOS Safari,
-  // si no, el video puede intentar fullscreen nativo y la app se ve en blanco)
-  function watchVideoForIOS(){
-    const container = document.getElementById('reader');
-    if(!container) return;
-    const observer = new MutationObserver(() => {
-      const videoElem = container.querySelector('video');
-      if (videoElem) {
-        videoElem.setAttribute("playsinline", "true");
-        videoElem.setAttribute("webkit-playsinline", "true");
-        videoElem.muted = true;
-        videoElem.setAttribute("muted", "true");
-        videoElem.setAttribute("autoplay", "true");
-        observer.disconnect();
-      }
-    });
-    observer.observe(container, { childList: true, subtree: true });
-  }
 
-  function showTapToStartOverlay(retryFn){
-    if(document.getElementById('ios-tap-start')) return;
-    const overlay = document.createElement('div');
-    overlay.id = 'ios-tap-start';
-    overlay.innerHTML = `
-      <div>Toca para activar la cámara</div>
-      <button id="ios-tap-start-btn">Activar cámara</button>
-    `;
-    document.body.appendChild(overlay);
-    document.getElementById('ios-tap-start-btn').addEventListener('click', async () => {
-      overlay.remove();
-      await retryFn();
-    }, { once: true });
-  }
+  async function loadCatalog(){
 
-  async function startScanner(){
-    try {
-      if(typeof Html5Qrcode === 'undefined'){
-        throw new Error("La librería html5-qrcode no se cargó.");
+    statusText.textContent =
+      "cargando catálogo…";
+
+    statusDot.className = "";
+
+    try{
+
+      const res =
+        await fetch(
+          SHEET_CSV_URL,
+          {
+            cache: "no-store"
+          }
+        );
+
+      if(!res.ok){
+
+        throw new Error(
+          "HTTP " + res.status
+        );
+
       }
 
-      html5QrCode = new Html5Qrcode("reader", {
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.QR_CODE
-        ],
-        verbose:false
+      const csvText =
+        await res.text();
+
+      const parsed =
+        Papa.parse(
+          csvText,
+          {
+            header:true,
+            skipEmptyLines:true
+          }
+        );
+
+      catalogIndex = {};
+
+      parsed.data.forEach(row => {
+
+        const sku =
+          normalizeSku(
+            row[COLS.sku]
+          );
+
+        if(sku){
+
+          catalogIndex[sku] = row;
+
+        }
+
       });
 
-      watchVideoForIOS();
+      catalogReady = true;
 
-      // Android: sin cambios, tal cual funciona hoy (facingMode únicamente, sin qrbox).
-      // iOS: Safari no tiene el detector nativo rápido (BarcodeDetector no
-      // existe ahí), cae al decodificador en JS, que necesita más resolución
-      // para distinguir las líneas finas de un código de barras. Por eso SOLO
-      // en iOS pedimos una resolución más alta (como sugerencia "ideal", nunca
-      // como requisito estricto, no puede fallar duro) y usamos un qrbox
-      // calculado dinámicamente en vez de un tamaño fijo en píxeles.
-      const cameraConfig = isIOS
-        ? { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-        : { facingMode: "environment" };
+      statusDot.className = "ready";
 
-      const scanConfig = isIOS
-        ? {
-            fps: 10,
-            qrbox: (viewfinderWidth, viewfinderHeight) => {
-              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-              const boxWidth = Math.floor(Math.min(viewfinderWidth * 0.85, minEdge * 1.4));
-              const boxHeight = Math.floor(boxWidth * 0.45);
-              return { width: boxWidth, height: boxHeight };
-            }
-          }
-        : { fps: 10 };
+      statusText.textContent = "";
 
-      await html5QrCode.start(cameraConfig, scanConfig, onScanSuccess, () => {});
+    }catch(err){
 
-      if (isIOS) triggerReFocus();
-
-    } catch (err) {
       console.error(err);
-      showDebugError("No se pudo iniciar la cámara: " + errText(err));
-      document.getElementById('camera-error').classList.add('show');
-      showTapToStartOverlay(startScanner);
+
+      showDebugError(
+        "Error cargando catálogo: " +
+        err.message
+      );
+
+      statusDot.className = "error";
+
+      statusText.textContent =
+        "error al cargar catálogo";
+
     }
+
   }
 
-  // Toque en el visor = reenfoque manual en iOS (respaldo si el automático no alcanza)
-  document.getElementById('scanner-wrap').addEventListener('click', () => {
-    if (!isIOS || scannerLocked) return;
-    const hint = document.querySelector('.hint');
-    const prevText = hint.textContent;
-    hint.textContent = "Enfocando…";
-    triggerReFocus().finally(() => {
-      setTimeout(() => { hint.textContent = prevText; }, 800);
-    });
-  });
 
-  loadCatalog();
-  startScanner();
-  setInterval(loadCatalog, 3 * 60 * 1000);
+  /* =========================================================
+     PRECIOS
+  ========================================================= */
+
+  function formatPrice(v){
+
+    if(
+      v === undefined ||
+      v === null ||
+      v.toString().trim() === ""
+    ){
+
+      return "—";
+
+    }
+
+    const cleaned =
+      v.toString()
+        .replace(/[^\d.,-]/g, '');
+
+    return cleaned
+      ? `$${cleaned}`
+      : v;
+
+  }
+
+
+  function parsePrice(raw){
+
+    if(
+      raw === undefined ||
+      raw === null
+    ){
+
+      return 0;
+
+    }
+
+    let s =
+      raw
+        .toString()
+        .trim()
+        .replace(/[^\d.,]/g, '');
+
+    if(!s) return 0;
+
+    const hasDot =
+      s.includes('.');
+
+    const hasComma =
+      s.includes(',');
+
+
+    if(hasDot && hasComma){
+
+      s =
+        s
+          .replace(/\./g, '')
+          .replace(',', '.');
+
+    }else if(
+      hasComma &&
+      !hasDot
+    ){
+
+      s =
+        s.replace(',', '.');
+
+    }else if(
+      hasDot &&
+      !hasComma
+    ){
+
+      const afterDot =
+        s.split('.').pop();
+
+      if(afterDot.length === 3){
+
+        s =
+          s.replace(/\./g, '');
+
+      }
+
+    }
+
+    const n =
+      parseFloat(s);
+
+    return isNaN(n)
+      ? 0
+      : n;
+
+  }
+
+
+  function formatCLP(n){
+
+    return '$' +
+      Math.round(n)
+        .toLocaleString('es-CL');
+
+  }
+
+
+  /* =========================================================
+     TICKET
+  ========================================================= */
+
+  function showTicket(row, skuScanned){
+
+    const ticket =
+      document.getElementById('ticket');
+
+    const scrim =
+      document.getElementById('ticket-scrim');
+
+
+    if(!row){
+
+      ticket.className = "not-found";
+
+      ticket.innerHTML = `
+
+        <div class="not-found-icon">
+          ✕
+        </div>
+
+        <div
+          class="ticket-title"
+          style="text-align:center;"
+        >
+          SKU no encontrado
+        </div>
+
+        <div
+          class="ticket-artist"
+          style="
+            text-align:center;
+            font-family:'JetBrains Mono',monospace;
+            font-size:12px;
+            margin-top:6px;
+          "
+        >
+          ${skuScanned}
+        </div>
+
+        <div class="ticket-actions">
+
+          <button
+            id="ticket-close"
+            style="flex:1;"
+          >
+            Seguir escaneando
+          </button>
+
+        </div>
+
+      `;
+
+    }else{
+
+      const imgUrl =
+        toDirectImageUrl(
+          row[COLS.imagen]
+        );
+
+      ticket.className = "";
+
+      ticket.innerHTML = `
+
+        <div class="ticket-row-top">
+
+          ${
+            imgUrl
+              ? `
+                <img
+                  class="ticket-img"
+                  src="${imgUrl}"
+                  onerror="
+                    this.outerHTML=
+                    '<div class=&quot;ticket-img placeholder&quot;>sin imagen</div>'
+                  "
+                >
+              `
+              : `
+                <div class="ticket-img placeholder">
+                  sin imagen
+                </div>
+              `
+          }
+
+          <div class="ticket-main">
+
+            <div class="ticket-sku">
+              ${normalizeSku(row[COLS.sku])}
+            </div>
+
+            <div class="ticket-title">
+              ${row[COLS.titulo] || "Sin título"}
+            </div>
+
+            <div class="ticket-artist">
+              ${row[COLS.artista] || ""}
+            </div>
+
+          </div>
+
+        </div>
+
+        <hr class="ticket-divider">
+
+        <div class="price-grid">
+
+          <div class="price-card">
+
+            <div class="label">
+              Precio
+            </div>
+
+            <div class="value">
+              ${formatPrice(row[COLS.precio])}
+            </div>
+
+          </div>
+
+          <div class="price-card club">
+
+            <div class="label">
+              Club de lectores
+            </div>
+
+            <div class="value">
+              ${formatPrice(row[COLS.precioClub])}
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="ticket-actions">
+
+          <button id="ticket-close">
+            Seguir escaneando
+          </button>
+
+          <button id="ticket-save">
+            Guardar
+          </button>
+
+        </div>
+
+      `;
+
+    }
+
+
+    document
+      .getElementById('ticket-close')
+      .addEventListener(
+        'click',
+        closeTicket
+      );
+
+
+    const saveBtn =
+      document.getElementById('ticket-save');
+
+
+    if(saveBtn){
+
+      saveBtn.addEventListener(
+        'click',
+        () => {
+
+          addToCart(row);
+
+          saveBtn.textContent =
+            "Guardado ✓";
+
+          saveBtn.classList.add(
+            'saved'
+          );
+
+          saveBtn.disabled = true;
+
+          setTimeout(
+            closeTicket,
+            500
+          );
+
+        }
+      );
+
+    }
+
+
+    ticket.classList.add('show');
+
+    scrim.classList.add('show');
+
+  }
+
+
+  /* =========================================================
+     CARRITO
+  ========================================================= */
+
+  function addToCart(row){
+
+    cartItems.push({
+
+      sku:
+        normalizeSku(
+          row[COLS.sku]
+        ),
+
+      titulo:
+        row[COLS.titulo] ||
+        "Sin título",
+
+      precio:
+        parsePrice(
+          row[COLS.precio]
+        ),
+
+      precioClub:
+        parsePrice(
+          row[COLS.precioClub]
+        )
+
+    });
+
+    renderCartBar();
+
+  }
+
+
+  function renderCartBar(){
+
+    const bar =
+      document.getElementById(
+        'cart-bar'
+      );
+
+    document.getElementById(
+      'cart-count'
+    ).textContent =
+      `${cartItems.length} producto${
+        cartItems.length === 1
+          ? ''
+          : 's'
+      }`;
+
+    document.getElementById(
+      'cart-total'
+    ).textContent =
+      "Ver Total";
+
+    bar.classList.toggle(
+      'show',
+      cartItems.length > 0
+    );
+
+  }
+
+
+  function cartTotal(mode){
+
+    const key =
+      mode === 'club'
+        ? 'precioClub'
+        : 'precio';
+
+    return cartItems.reduce(
+      (sum, i) =>
+        sum + (i[key] || 0),
+      0
+    );
+
+  }
+
+
+  function renderCartSheet(){
+
+    const sheet =
+      document.getElementById(
+        'cart-sheet'
+      );
+
+    const totalNormal =
+      cartTotal('normal');
+
+    const totalClub =
+      cartTotal('club');
+
+
+    const rows =
+      cartItems
+        .map(
+          (item, idx) => `
+
+            <div class="cart-item">
+
+              <div class="info">
+
+                <div class="t">
+                  ${item.titulo}
+                </div>
+
+                <div class="s">
+                  ${item.sku}
+                </div>
+
+              </div>
+
+              <div class="p">
+
+                ${formatCLP(item.precio)}
+
+                <span class="club">
+                  ${formatCLP(item.precioClub)}
+                </span>
+
+              </div>
+
+              <button
+                class="rm"
+                onclick="removeFromCart(${idx})"
+              >
+                ×
+              </button>
+
+            </div>
+
+          `
+        )
+        .join('');
+
+
+    sheet.innerHTML = `
+
+      <h2>
+        Productos guardados
+      </h2>
+
+      ${
+        rows ||
+        '<p style="color:var(--text-muted); font-size:13px;">Todavía no guardaste ningún producto.</p>'
+      }
+
+      <div class="totals-block">
+
+        <div
+          class="cart-total-row normal"
+          id="total-row-normal"
+          onclick="setActivePriceMode('normal')"
+          style="cursor:pointer;"
+        >
+
+          <span class="label">
+            Total (Precio normal)
+            ${
+              activePriceMode === 'normal'
+                ? '✓'
+                : ''
+            }
+          </span>
+
+          <span class="value">
+            ${formatCLP(totalNormal)}
+          </span>
+
+        </div>
+
+        <div
+          class="cart-total-row club"
+          id="total-row-club"
+          onclick="setActivePriceMode('club')"
+          style="cursor:pointer;"
+        >
+
+          <span class="label">
+            Total (Club de lectores)
+            ${
+              activePriceMode === 'club'
+                ? '✓'
+                : ''
+            }
+          </span>
+
+          <span class="value">
+            ${formatCLP(totalClub)}
+          </span>
+
+        </div>
+
+      </div>
+
+      <button id="cart-clear">
+        Vaciar lista
+      </button>
+
+      <button id="cart-close">
+        Cerrar
+      </button>
+
+    `;
+
+
+    document
+      .getElementById('cart-close')
+      .addEventListener(
+        'click',
+        closeCart
+      );
+
+
+    document
+      .getElementById('cart-clear')
+      .addEventListener(
+        'click',
+        () => {
+
+          cartItems = [];
+
+          renderCartBar();
+
+          renderCartSheet();
+
+        }
+      );
+
+  }
+
+
+  function setActivePriceMode(mode){
+
+    activePriceMode = mode;
+
+    renderCartSheet();
+
+    renderCartBar();
+
+  }
+
+
+  function removeFromCart(idx){
+
+    cartItems.splice(
+      idx,
+      1
+    );
+
+    renderCartBar();
+
+    renderCartSheet();
+
+  }
+
+
+  function openCart(){
+
+    renderCartSheet();
+
+    document
+      .getElementById('cart-sheet')
+      .classList.add('show');
+
+    scannerLocked = true;
+
+  }
+
+
+  function closeCart(){
+
+    document
+      .getElementById('cart-sheet')
+      .classList.remove('show');
+
+    scannerLocked = false;
+
+  }
+
+
+  function closeTicket(){
+
+    document
+      .getElementById('ticket')
+      .classList.remove('show');
+
+    document
+      .getElementById('ticket-scrim')
+      .classList.remove('show');
+
+    setTimeout(
+      () => {
+        scannerLocked = false;
+      },
+      200
+    );
+
+  }
+
+
+  /* =========================================================
+     SCANNER
+  ========================================================= */
+
+  function onScanSuccess(decodedText){
+
+    if(scannerLocked)
+      return;
+
+
+    if(!catalogReady){
+
+      statusText.textContent =
+        "catálogo aún no cargado, espera…";
+
+      return;
+
+    }
+
+
+    scannerLocked = true;
+
+
+    if(navigator.vibrate){
+
+      navigator.vibrate(60);
+
+    }
+
+
+    const sku =
+      normalizeSku(
+        decodedText
+      );
+
+
+    const row =
+      catalogIndex[sku];
+
+
+    showTicket(
+      row,
+      sku
+    );
+
+  }
+
+
+  /* =========================================================
+     IOS VIDEO FIX
+  ========================================================= */
+
+  function prepareVideoForIOS(){
+
+    const container =
+      document.getElementById(
+        'reader'
+      );
+
+    if(!container)
+      return;
+
+
+    const applyVideoSettings =
+      () => {
+
+        const video =
+          container.querySelector(
+            'video'
+          );
+
+        if(!video)
+          return false;
+
+
+        video.setAttribute(
+          'playsinline',
+          ''
+        );
+
+        video.setAttribute(
+          'webkit-playsinline',
+          ''
+        );
+
+        video.setAttribute(
+          'autoplay',
+          ''
+        );
+
+        video.setAttribute(
+          'muted',
+          ''
+        );
+
+        video.muted = true;
+
+        video.autoplay = true;
+
+        video.playsInline = true;
+
+
+        /*
+         * Intentamos reproducir el video.
+         * En iOS esto debe ocurrir después
+         * de una interacción del usuario.
+         */
+
+        const playPromise =
+          video.play();
+
+        if(
+          playPromise &&
+          typeof playPromise.catch === 'function'
+        ){
+
+          playPromise.catch(
+            () => {}
+          );
+
+        }
+
+
+        return true;
+
+      };
+
+
+    if(applyVideoSettings())
+      return;
+
+
+    const observer =
+      new MutationObserver(
+        () => {
+
+          if(
+            applyVideoSettings()
+          ){
+
+            observer.disconnect();
+
+          }
+
+        }
+      );
+
+
+    observer.observe(
+      container,
+      {
+        childList:true,
+        subtree:true
+      }
+    );
+
+  }
+
+
+  /* =========================================================
+     QRBOX
+     Zona rectangular especialmente útil
+     para EAN / UPC / CODE128
+  ========================================================= */
+
+  function getScanBox(
+    viewfinderWidth,
+    viewfinderHeight
+  ){
+
+    let width =
+      Math.floor(
+        viewfinderWidth * 0.88
+      );
+
+
+    let height =
+      Math.floor(
+        Math.min(
+          180,
+          viewfinderHeight * 0.30
+        )
+      );
+
+
+    /*
+     * Evita tamaños demasiado pequeños
+     * en pantallas pequeñas.
+     */
+
+    width =
+      Math.max(
+        240,
+        width
+      );
+
+    height =
+      Math.max(
+        100,
+        height
+      );
+
+
+    /*
+     * Evita superar el tamaño real
+     * del contenedor.
+     */
+
+    width =
+      Math.min(
+        width,
+        viewfinderWidth - 20
+      );
+
+    height =
+      Math.min(
+        height,
+        viewfinderHeight - 20
+      );
+
+
+    return {
+      width,
+      height
+    };
+
+  }
+
+
+  /* =========================================================
+     CREAR SCANNER
+  ========================================================= */
+
+  function createScanner(){
+
+    if(html5QrCode){
+
+      try{
+
+        html5QrCode.clear();
+
+      }catch(e){}
+
+    }
+
+
+    html5QrCode =
+      new Html5Qrcode(
+        "reader",
+        {
+
+          verbose:false,
+
+          /*
+           * Permite utilizar BarcodeDetector
+           * cuando el navegador lo soporte.
+           * Si no lo soporta, html5-qrcode
+           * utiliza su propio procesamiento.
+           */
+
+          useBarCodeDetectorIfSupported:true,
+
+          formatsToSupport:[
+
+            Html5QrcodeSupportedFormats.EAN_13,
+
+            Html5QrcodeSupportedFormats.EAN_8,
+
+            Html5QrcodeSupportedFormats.UPC_A,
+
+            Html5QrcodeSupportedFormats.UPC_E,
+
+            Html5QrcodeSupportedFormats.CODE_128,
+
+            Html5QrcodeSupportedFormats.CODE_39,
+
+            Html5QrcodeSupportedFormats.QR_CODE
+
+          ]
+
+        }
+      );
+
+  }
+
+
+  /* =========================================================
+     OBTENER CÁMARA TRASERA
+  ========================================================= */
+
+  async function findBackCamera(){
+
+    try{
+
+      if(
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.enumerateDevices
+      ){
+
+        return null;
+
+      }
+
+
+      const devices =
+        await navigator
+          .mediaDevices
+          .enumerateDevices();
+
+
+      const cameras =
+        devices.filter(
+          device =>
+            device.kind ===
+            'videoinput'
+        );
+
+
+      if(!cameras.length)
+        return null;
+
+
+      /*
+       * Intentamos encontrar una cámara
+       * cuyo nombre indique que es trasera.
+       */
+
+      const backCamera =
+        cameras.find(
+          camera =>
+            /back|rear|environment|trasera|posterior/i
+              .test(
+                camera.label || ""
+              )
+        );
+
+
+      if(backCamera){
+
+        return backCamera.deviceId;
+
+      }
+
+
+      /*
+       * Si Safari todavía no entrega
+       * nombres de cámara, usamos la última
+       * como fallback.
+       */
+
+      return cameras[
+        cameras.length - 1
+      ].deviceId;
+
+    }catch(err){
+
+      console.warn(
+        "No se pudo enumerar cámaras:",
+        err
+      );
+
+      return null;
+
+    }
+
+  }
+
+
+  /* =========================================================
+     INICIAR SCANNER
+  ========================================================= */
+
+  async function startScanner(){
+
+    if(scannerStarting)
+      return;
+
+
+    scannerStarting = true;
+
+
+    const cameraError =
+      document.getElementById(
+        'camera-error'
+      );
+
+
+    cameraError.classList.remove(
+      'show'
+    );
+
+
+    try{
+
+      if(
+        typeof Html5Qrcode ===
+        'undefined'
+      ){
+
+        throw new Error(
+          "La librería html5-qrcode no se cargó."
+        );
+
+      }
+
+
+      /*
+       * HTTPS es obligatorio para getUserMedia.
+       */
+
+      if(
+        location.protocol !== 'https:' &&
+        location.hostname !== 'localhost' &&
+        location.hostname !== '127.0.0.1'
+      ){
+
+        throw new Error(
+          "La cámara requiere HTTPS."
+        );
+
+      }
+
+
+      createScanner();
+
+
+      /*
+       * Muy importante para iPhone:
+       * buscar las cámaras después de la
+       * interacción del usuario.
+       */
+
+      selectedCameraId =
+        await findBackCamera();
+
+
+      prepareVideoForIOS();
+
+
+      const scannerConfig = {
+
+        fps: isIOS ? 12 : 10,
+
+        qrbox: getScanBox,
+
+        aspectRatio: 1.7777778,
+
+        disableFlip:false
+
+      };
+
+
+      /*
+       * PRIMER INTENTO
+       *
+       * Si tenemos ID de cámara,
+       * utilizamos directamente esa cámara.
+       */
+
+      if(selectedCameraId){
+
+        try{
+
+          await html5QrCode.start(
+
+            selectedCameraId,
+
+            scannerConfig,
+
+            onScanSuccess,
+
+            () => {}
+
+          );
+
+          scannerStarting = false;
+
+          return;
+
+        }catch(firstCameraError){
+
+          console.warn(
+            "Fallo iniciando cámara por ID:",
+            firstCameraError
+          );
+
+        }
+
+      }
+
+
+      /*
+       * SEGUNDO INTENTO
+       *
+       * facingMode environment.
+       *
+       * Esto mantiene el comportamiento
+       * original de Android.
+       */
+
+      await html5QrCode.start(
+
+        {
+          facingMode:{
+            exact:"environment"
+          }
+        },
+
+        scannerConfig,
+
+        onScanSuccess,
+
+        () => {}
+
+      );
+
+
+      scannerStarting = false;
+
+
+    }catch(err){
+
+      console.error(err);
+
+      showDebugError(
+        "No se pudo iniciar la cámara: " +
+        (
+          err && err.message
+            ? err.message
+            : err
+        )
+      );
+
+
+      scannerStarting = false;
+
+
+      cameraError.classList.add(
+        'show'
+      );
+
+
+      /*
+       * En iOS mostramos nuevamente
+       * el botón de activación.
+       */
+
+      if(isIOS){
+
+        showIOSStartOverlay();
+
+      }
+
+    }
+
+  }
+
+
+  /* =========================================================
+     OVERLAY IOS
+  ========================================================= */
+
+  function showIOSStartOverlay(){
+
+    if(
+      document.getElementById(
+        'ios-tap-start'
+      )
+    ){
+
+      return;
+
+    }
+
+
+    const overlay =
+      document.createElement(
+        'div'
+      );
+
+
+    overlay.id =
+      'ios-tap-start';
+
+
+    overlay.innerHTML = `
+
+      <div class="ios-title">
+        Activar cámara
+      </div>
+
+      <div class="ios-description">
+        Safari necesita que autorices
+        la cámara para escanear los
+        códigos de barras.
+      </div>
+
+      <button id="ios-tap-start-btn">
+        Activar cámara
+      </button>
+
+    `;
+
+
+    document.body.appendChild(
+      overlay
+    );
+
+
+    document
+      .getElementById(
+        'ios-tap-start-btn'
+      )
+      .addEventListener(
+        'click',
+        async () => {
+
+          overlay.remove();
+
+          await startScanner();
+
+        },
+        {
+          once:true
+        }
+      );
+
+  }
+
+
+  /* =========================================================
+     REINTENTAR CÁMARA
+  ========================================================= */
+
+  function retryCamera(){
+
+    const cameraError =
+      document.getElementById(
+        'camera-error'
+      );
+
+    cameraError.classList.remove(
+      'show'
+    );
+
+
+    if(isIOS){
+
+      showIOSStartOverlay();
+
+    }else{
+
+      startScanner();
+
+    }
+
+  }
+
+
+  /* =========================================================
+     INICIALIZACIÓN
+  ========================================================= */
+
+  async function initializeApp(){
+
+    /*
+     * El catálogo se carga igual
+     * en Android y iPhone.
+     */
+
+    loadCatalog();
+
+
+    /*
+     * ANDROID / OTROS
+     *
+     * Conservamos el comportamiento
+     * automático original.
+     */
+
+    if(!isIOS){
+
+      startScanner();
+
+    }
+
+
+    /*
+     * iPHONE / iPAD
+     *
+     * No solicitamos la cámara al cargar.
+     * Esperamos una interacción explícita.
+     */
+
+    if(isIOS){
+
+      statusText.textContent =
+        "toca para activar cámara";
+
+      showIOSStartOverlay();
+
+    }
+
+  }
+
+
+  /* =========================================================
+     ARRANCAR APP
+  ========================================================= */
+
+  initializeApp();
+
+
+  /*
+   * Actualizar catálogo cada 3 minutos.
+   */
+
+  setInterval(
+    loadCatalog,
+    3 * 60 * 1000
+  );
+
 </script>
 
 </body>

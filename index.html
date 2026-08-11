@@ -157,6 +157,25 @@
     font-size:14px;
   }
 
+  /* ---------- Selector de cámara (fallback manual iOS) ---------- */
+  #camera-select-wrap{
+    position:absolute;
+    top:12px; left:50%;
+    transform:translateX(-50%);
+    z-index:6;
+    display:none;
+  }
+  #camera-select-wrap.show{ display:block; }
+  #camera-select{
+    background:rgba(20,16,14,.85);
+    color:var(--text);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:8px 14px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    max-width:70vw;
+  }
 
   #ticket-scrim{
     position:fixed; inset:0;
@@ -456,6 +475,10 @@
 <div id="scanner-wrap">
   <div id="reader"></div>
 
+  <div id="camera-select-wrap">
+    <select id="camera-select"></select>
+  </div>
+
   <div class="viewfinder">
     <div class="frame">
       <div class="corner tl"></div>
@@ -733,6 +756,8 @@
 
   // ---------- Scanner ----------
   let scannerLocked = false;
+  let html5QrCode = null;
+  let currentCameraId = null;
 
   function onScanSuccess(decodedText){
     if(scannerLocked) return;
@@ -747,8 +772,45 @@
     showTicket(row, sku);
   }
 
+  const scanConfig = {
+    fps: 10,
+    qrbox: { width: 300, height: 180 },
+    aspectRatio: 1.777,
+    disableFlip: false
+  };
+
+  // Elige la mejor cámara trasera disponible, evitando lentes
+  // ultra gran angular / teleobjetivo (que en iPhone enfocan mal de cerca).
+  function pickBestBackCamera(devices){
+    const backCams = devices.filter(d => /back|rear|trasera|environment/i.test(d.label));
+    const primary = backCams.find(d => !/ultra ?wide|tele|zoom/i.test(d.label));
+    return primary || backCams[0] || devices[devices.length - 1] || devices[0];
+  }
+
+  function populateCameraSelect(devices, selectedId){
+    const wrap = document.getElementById('camera-select-wrap');
+    const select = document.getElementById('camera-select');
+    if(devices.length <= 1){
+      wrap.classList.remove('show');
+      return;
+    }
+    select.innerHTML = devices.map(d =>
+      `<option value="${d.id}" ${d.id === selectedId ? 'selected' : ''}>${d.label || d.id}</option>`
+    ).join('');
+    wrap.classList.add('show');
+    select.onchange = () => switchCamera(select.value);
+  }
+
+  function switchCamera(cameraId){
+    if(!html5QrCode || cameraId === currentCameraId) return;
+    html5QrCode.stop().then(() => {
+      currentCameraId = cameraId;
+      return html5QrCode.start(cameraId, scanConfig, onScanSuccess, () => {});
+    }).catch(err => console.error(err));
+  }
+
   function startScanner(){
-    const html5QrCode = new Html5Qrcode("reader", {
+    html5QrCode = new Html5Qrcode("reader", {
       formatsToSupport: [
         Html5QrcodeSupportedFormats.EAN_13,
         Html5QrcodeSupportedFormats.EAN_8,
@@ -761,14 +823,26 @@
       verbose:false
     });
 
-    html5QrCode.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 280, height: 160 } },
-      onScanSuccess,
-      () => {} // ignorar errores de frame-a-frame (no hay código visible)
-    ).catch(err => {
+    Html5Qrcode.getCameras().then(devices => {
+      if(!devices || devices.length === 0) throw new Error("Sin cámaras disponibles");
+
+      const chosen = pickBestBackCamera(devices);
+      currentCameraId = chosen.id;
+      populateCameraSelect(devices, chosen.id);
+
+      return html5QrCode.start(chosen.id, scanConfig, onScanSuccess, () => {});
+    }).catch(err => {
       console.error(err);
-      document.getElementById('camera-error').classList.add('show');
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        scanConfig,
+        onScanSuccess,
+        () => {}
+      ).catch(err2 => {
+        console.error(err2);
+        document.getElementById('camera-error').classList.add('show');
+      });
     });
   }
 

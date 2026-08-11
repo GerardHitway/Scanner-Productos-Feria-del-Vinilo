@@ -1,16 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Escáner de stock</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+  :root{
+    --bg:            #14100e;
+    --surface:       #201a16;
+    --surface-2:     #2a221c;
+    --line:          #3a3128;
+    --text:          #f2e9de;
+    --text-muted:    #a79684;
+    --accent:        #c9622a;
+    --gold:          #d4af37;
+    --error:         #c0453a;
+    --radius:        18px;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{
+    height:100%;
+    height:100dvh; /* iOS Safari: la barra de direcciones dinámica rompe 100vh/100% */
+  }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    padding:16px 20px 12px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    border-bottom:1px solid var(--line);
+    flex-shrink:0;
+    z-index:5;
+    background:var(--bg);
+  }
+  header .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+  }
+  header h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:20px;
+    margin:2px 0 0;
+    letter-spacing:-.01em;
+  }
+  #status-dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--text-muted);
+    flex-shrink:0;
+    transition:background .3s;
+  }
+  #status-dot.ready{ background:#5fae7a; }
+  #status-dot.error{ background:var(--error); }
+  .status-wrap{ display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted); }
+
+  #scanner-wrap{
+    position:relative;
+    flex:1;
+    min-height:0;
+    background:#000;
+  }
+  #reader{ width:100%; height:100%; }
+  #reader video{ width:100% !important; height:100% !important; object-fit:cover; }
+
+  #reader__dashboard, #reader__header_message, #reader__filescan_input, #reader__camera_selection{ display:none !important; }
+  #reader__scan_region{ border:none !important; }
+  #reader__scan_region img{ display:none !important; }
+
+  .viewfinder{
+    position:absolute; inset:0;
+    pointer-events:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .viewfinder .frame{
+    width:78%;
+    max-width:420px;
+    aspect-ratio:16/9;
+    position:relative;
+  }
+  .viewfinder .corner{
+    position:absolute;
+    width:28px; height:28px;
+    border:3px solid var(--accent);
+  }
+  .viewfinder .corner.tl{ top:0; left:0; border-right:none; border-bottom:none; border-top-left-radius:8px; }
+  .viewfinder .corner.tr{ top:0; right:0; border-left:none; border-bottom:none; border-top-right-radius:8px; }
+  .viewfinder .corner.bl{ bottom:0; left:0; border-right:none; border-top:none; border-bottom-left-radius:8px; }
+  .viewfinder .corner.br{ bottom:0; right:0; border-left:none; border-top:none; border-bottom-right-radius:8px; }
+  .viewfinder .scanline{
+    position:absolute;
+    left:6%; right:6%;
+    height:2px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    box-shadow:0 0 8px 1px var(--accent);
+    animation:sweep 2.2s ease-in-out infinite;
+  }
+  @keyframes sweep{
+    0%,100%{ top:8%; opacity:.9; }
+    50%{ top:92%; opacity:.5; }
+  }
+  .hint{
+    position:absolute;
+    bottom:22px; left:0; right:0;
+    text-align:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    letter-spacing:.06em;
+    color:var(--text-muted);
+    text-shadow:0 1px 4px rgba(0,0,0,.8);
+  }
+
+  #camera-error{
+    position:absolute; inset:0;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    padding:32px;
+    text-align:center;
+    background:var(--bg);
+  }
+  #camera-error.show{ display:flex; }
+  #camera-error p{ color:var(--text-muted); font-size:14px; line-height:1.5; margin:0; }
+  #camera-error button{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:12px 22px;
+    border-radius:999px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+  }
+
+  #ticket-scrim{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.55);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+    z-index:8;
+  }
+  #ticket-scrim.show{ opacity:1; pointer-events:auto; }
+
+  #ticket{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:9;
+    background:var(--surface);
+    border-top-left-radius:24px;
+    border-top-right-radius:24px;
+    padding:10px 22px calc(26px + env(safe-area-inset-bottom));
+    transform:translateY(100%);
+    transition:transform .32s cubic-bezier(.2,.9,.25,1);
+    box-shadow:0 -12px 40px rgba(0,0,0,.5);
+    max-height:78vh;
+    overflow-y:auto;
+  }
+  #ticket.show{ transform:translateY(0); }
+
+  #ticket::before{
+    content:"";
+    display:block;
+    width:36px; height:4px;
+    background:var(--line);
+    border-radius:3px;
+    margin:0 auto 18px;
+  }
+
+  .ticket-row-top{
+    display:flex;
+    gap:16px;
+    align-items:flex-start;
+  }
+  .ticket-img{
+    width:92px; height:92px;
+    border-radius:10px;
+    object-fit:cover;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    flex-shrink:0;
+  }
+  .ticket-img.placeholder{
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-muted);
+    font-size:10px;
+    font-family:'JetBrains Mono',monospace;
+    text-align:center;
+    padding:6px;
+  }
+  .ticket-main{ min-width:0; flex:1; }
+  .ticket-sku{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--accent);
+    letter-spacing:.05em;
+  }
+  .ticket-title{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:19px;
+    line-height:1.2;
+    margin:4px 0 2px;
+  }
+  .ticket-artist{
+    color:var(--text-muted);
+    font-size:14px;
+  }
+
+  .ticket-divider{
+    border:none;
+    border-top:1px dashed var(--line);
+    margin:18px 0 14px;
+  }
+
+  .price-grid{
+    display:flex;
+    gap:12px;
+  }
+  .price-card{
+    flex:1;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 14px;
+  }
+  .price-card .label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+  }
+  .price-card .value{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:20px;
+    color:var(--gold);
+    margin-top:4px;
+  }
+  .price-card.club .value{ color:var(--accent); }
+
+  .ticket-actions{
+    display:flex;
+    gap:10px;
+    margin-top:20px;
+  }
+  #ticket-close, #ticket-save{
+    flex:1;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:13px;
+    border-radius:12px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+  }
+  #ticket-save{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  #ticket-save.saved{
+    background:#5fae7a;
+    border-color:#5fae7a;
+  }
+
+  /* ---------- Cart bar ---------- */
+  #cart-bar{
+    position:fixed;
+    left:16px; right:16px;
+    bottom:calc(16px + env(safe-area-inset-bottom));
+    z-index:7;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:12px 18px;
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow:0 8px 24px rgba(0,0,0,.45);
+  }
+  #cart-bar.show{ display:flex; }
+  #cart-bar .cart-count{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--text-muted);
+  }
+  #cart-bar .cart-total{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:16px;
+    color:var(--gold);
+  }
+
+  #cart-sheet{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:9;
+    background:var(--surface);
+    border-top-left-radius:24px;
+    border-top-right-radius:24px;
+    padding:10px 22px calc(26px + env(safe-area-inset-bottom));
+    transform:translateY(100%);
+    transition:transform .32s cubic-bezier(.2,.9,.25,1);
+    box-shadow:0 -12px 40px rgba(0,0,0,.5);
+    max-height:78vh;
+    overflow-y:auto;
+  }
+  #cart-sheet.show{ transform:translateY(0); }
+  #cart-sheet::before{
+    content:"";
+    display:block;
+    width:36px; height:4px;
+    background:var(--line);
+    border-radius:3px;
+    margin:0 auto 16px;
+  }
+  #cart-sheet h2{
+    font-family:'Fraunces',serif;
+    font-size:18px;
+    font-weight:600;
+    margin:0 0 14px;
+  }
+  .cart-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .cart-item .info{ min-width:0; }
+  .cart-item .info .t{
+    font-size:14px;
+    font-weight:600;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .cart-item .info .s{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--text-muted);
+  }
+  .cart-item .p{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--gold);
+    font-size:13px;
+    flex-shrink:0;
+    text-align:right;
+    line-height:1.5;
+  }
+  .cart-item .p .club{
+    color:var(--accent);
+    display:block;
+    font-size:11.5px;
+  }
+  .cart-item .rm{
+    background:none;
+    border:none;
+    color:var(--error);
+    font-size:18px;
+    line-height:1;
+    padding:4px 6px;
+    flex-shrink:0;
+  }
+
+  .totals-block{
+    margin-top:6px;
+  }
+  .cart-total-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    font-family:'JetBrains Mono',monospace;
+    border-bottom:1px solid var(--line);
+  }
+  .cart-total-row:last-of-type{ border-bottom:none; }
+  .cart-total-row .label{ color:var(--text-muted); font-size:12.5px; }
+  .cart-total-row .value{ font-size:19px; font-weight:700; color:var(--gold); }
+  .cart-total-row.club .value{ color:var(--accent); }
+
+  #cart-clear, #cart-close{
+    width:100%;
+    padding:13px;
+    border-radius:12px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    margin-top:10px;
+  }
+  #cart-close{
+    background:var(--accent);
+    border:1px solid var(--accent);
+    color:#fff;
+  }
+  #cart-clear{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--error);
+  }
+
+  .not-found .ticket-title{ color:var(--error); }
+  .not-found-icon{
+    font-family:'JetBrains Mono',monospace;
+    font-size:34px;
+    color:var(--error);
+    text-align:center;
+    margin-bottom:6px;
+  }
+
+  #ios-tap-start{
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,0.9); color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; font-family: 'Inter', sans-serif;
+  }
+  #ios-tap-start button{
+    margin-top:16px;
+    padding:13px 26px;
+    font-size:15px;
+    border-radius:999px;
+    border:none;
+    background:var(--accent);
+    color:#fff;
+    font-weight:600;
+  }
+
+  #debug-error-box{
+    position:fixed; top:0; left:0; right:0; z-index:99999;
+    background:#c0453a; color:#fff; font-family:'JetBrains Mono',monospace;
+    font-size:11px; padding:10px; white-space:pre-wrap;
+    max-height:40vh; overflow:auto;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">Punto de venta</div>
+    <h1>Escanear producto</h1>
+  </div>
+  <div class="status-wrap">
+    <span id="status-dot"></span>
+    <span id="status-text">cargando catálogo…</span>
+  </div>
+</header>
+
+<div id="scanner-wrap">
+  <div id="reader"></div>
+
+  <div class="viewfinder">
+    <div class="frame">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+      <div class="scanline"></div>
+    </div>
+  </div>
+  <div class="hint">Apunta al código de barras</div>
+
+  <div id="camera-error">
+    <p>No pudimos acceder a la cámara.<br>Revisa los permisos del navegador y vuelve a intentar.</p>
+    <button onclick="location.reload()">Reintentar</button>
+  </div>
+</div>
+
+<div id="ticket-scrim" onclick="closeTicket()"></div>
+<div id="ticket"></div>
+
+<div id="cart-bar" onclick="openCart()">
+  <span class="cart-count" id="cart-count">0 productos</span>
+  <span class="cart-total" id="cart-total">Ver Total</span>
+</div>
+<div id="cart-sheet"></div>
+
 <script>
-  // ======= DEBUG VISIBLE EN PANTALLA (para ver errores sin Mac) =======
+  // ======= DEBUG VISIBLE EN PANTALLA =======
   function showDebugError(msg){
     let box = document.getElementById('debug-error-box');
     if(!box){
       box = document.createElement('div');
       box.id = 'debug-error-box';
-      box.style.cssText = `
-        position:fixed; top:0; left:0; right:0; z-index:99999;
-        background:#c00; color:#fff; font-family:monospace;
-        font-size:12px; padding:10px; white-space:pre-wrap;
-        max-height:40vh; overflow:auto;
-      `;
       document.body.appendChild(box);
     }
     box.textContent += (box.textContent ? "\n---\n" : "") + msg;
@@ -21,7 +525,7 @@
   window.addEventListener('unhandledrejection', (e) => {
     showDebugError("PROMISE ERROR: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
   });
-  // ======================================================================
+  // ==========================================
 
   // ======= CONFIGURACIÓN =======
   const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCTJ02RhdYcZqjlrKneeA7IUVq9TT-jhGAVRRY9X6XKIy038KNtfw1Tamao2yMyA/pub?gid=540197870&single=true&output=csv";
@@ -61,8 +565,8 @@
   }
 
   async function loadCatalog(){
-    if(statusText) statusText.textContent = "cargando catálogo…";
-    if(statusDot) statusDot.className = "";
+    statusText.textContent = "cargando catálogo…";
+    statusDot.className = "";
     try{
       const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
       if(!res.ok) throw new Error("HTTP " + res.status);
@@ -74,13 +578,13 @@
         if(sku) catalogIndex[sku] = row;
       });
       catalogReady = true;
-      if(statusDot) statusDot.className = "ready";
-      if(statusText) statusText.textContent = "";
+      statusDot.className = "ready";
+      statusText.textContent = "";
     }catch(err){
       console.error(err);
       showDebugError("Error cargando catálogo: " + err.message);
-      if(statusDot) statusDot.className = "error";
-      if(statusText) statusText.textContent = "error al cargar catálogo";
+      statusDot.className = "error";
+      statusText.textContent = "error al cargar catálogo";
     }
   }
 
@@ -93,7 +597,6 @@
   function showTicket(row, skuScanned){
     const ticket = document.getElementById('ticket');
     const scrim = document.getElementById('ticket-scrim');
-    if(!ticket || !scrim) return;
 
     if(!row){
       ticket.className = "not-found";
@@ -125,3 +628,249 @@
             <div class="label">Precio</div>
             <div class="value">${formatPrice(row[COLS.precio])}</div>
           </div>
+          <div class="price-card club">
+            <div class="label">Club de lectores</div>
+            <div class="value">${formatPrice(row[COLS.precioClub])}</div>
+          </div>
+        </div>
+        <div class="ticket-actions">
+          <button id="ticket-close">Seguir escaneando</button>
+          <button id="ticket-save">Guardar</button>
+        </div>
+      `;
+    }
+
+    document.getElementById('ticket-close').addEventListener('click', closeTicket);
+    const saveBtn = document.getElementById('ticket-save');
+    if(saveBtn){
+      saveBtn.addEventListener('click', () => {
+        addToCart(row);
+        saveBtn.textContent = "Guardado ✓";
+        saveBtn.classList.add('saved');
+        saveBtn.disabled = true;
+        setTimeout(closeTicket, 500);
+      });
+    }
+    ticket.classList.add('show');
+    scrim.classList.add('show');
+  }
+
+  // ---------- Carrito / suma ----------
+  let cartItems = [];
+
+  function parsePrice(raw){
+    if(raw === undefined || raw === null) return 0;
+    let s = raw.toString().trim().replace(/[^\d.,]/g, '');
+    if(!s) return 0;
+    const hasDot = s.includes('.');
+    const hasComma = s.includes(',');
+    if(hasDot && hasComma){
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if(hasComma && !hasDot){
+      s = s.replace(',', '.');
+    } else if(hasDot && !hasComma){
+      const afterDot = s.split('.').pop();
+      if(afterDot.length === 3){
+        s = s.replace(/\./g, '');
+      }
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function formatCLP(n){
+    return '$' + Math.round(n).toLocaleString('es-CL');
+  }
+
+  function addToCart(row){
+    cartItems.push({
+      sku: normalizeSku(row[COLS.sku]),
+      titulo: row[COLS.titulo] || "Sin título",
+      precio: parsePrice(row[COLS.precio]),
+      precioClub: parsePrice(row[COLS.precioClub])
+    });
+    renderCartBar();
+  }
+
+  function renderCartBar(){
+    const bar = document.getElementById('cart-bar');
+    document.getElementById('cart-count').textContent =
+      `${cartItems.length} producto${cartItems.length === 1 ? '' : 's'}`;
+    document.getElementById('cart-total').textContent = "Ver Total";
+    bar.classList.toggle('show', cartItems.length > 0);
+  }
+
+  function cartTotal(mode){
+    const key = mode === 'club' ? 'precioClub' : 'precio';
+    return cartItems.reduce((sum, i) => sum + (i[key] || 0), 0);
+  }
+
+  let activePriceMode = 'normal';
+
+  function renderCartSheet(){
+    const sheet = document.getElementById('cart-sheet');
+    const totalNormal = cartTotal('normal');
+    const totalClub = cartTotal('club');
+    const rows = cartItems.map((item, idx) => `
+      <div class="cart-item">
+        <div class="info">
+          <div class="t">${item.titulo}</div>
+          <div class="s">${item.sku}</div>
+        </div>
+        <div class="p">
+          ${formatCLP(item.precio)}
+          <span class="club">${formatCLP(item.precioClub)}</span>
+        </div>
+        <button class="rm" onclick="removeFromCart(${idx})">×</button>
+      </div>
+    `).join('');
+    sheet.innerHTML = `
+      <h2>Productos guardados</h2>
+      ${rows || '<p style="color:var(--text-muted); font-size:13px;">Todavía no guardaste ningún producto.</p>'}
+      <div class="totals-block">
+        <div class="cart-total-row normal" id="total-row-normal" onclick="setActivePriceMode('normal')" style="cursor:pointer;">
+          <span class="label">Total (Precio normal) ${activePriceMode === 'normal' ? '✓' : ''}</span>
+          <span class="value">${formatCLP(totalNormal)}</span>
+        </div>
+        <div class="cart-total-row club" id="total-row-club" onclick="setActivePriceMode('club')" style="cursor:pointer;">
+          <span class="label">Total (Club de lectores) ${activePriceMode === 'club' ? '✓' : ''}</span>
+          <span class="value">${formatCLP(totalClub)}</span>
+        </div>
+      </div>
+      <button id="cart-clear">Vaciar lista</button>
+      <button id="cart-close">Cerrar</button>
+    `;
+    document.getElementById('cart-close').addEventListener('click', closeCart);
+    document.getElementById('cart-clear').addEventListener('click', () => {
+      cartItems = [];
+      renderCartBar();
+      renderCartSheet();
+    });
+  }
+
+  function setActivePriceMode(mode){
+    activePriceMode = mode;
+    renderCartSheet();
+    renderCartBar();
+  }
+
+  function removeFromCart(idx){
+    cartItems.splice(idx, 1);
+    renderCartBar();
+    renderCartSheet();
+  }
+
+  function openCart(){
+    renderCartSheet();
+    document.getElementById('cart-sheet').classList.add('show');
+    scannerLocked = true;
+  }
+
+  function closeCart(){
+    document.getElementById('cart-sheet').classList.remove('show');
+    scannerLocked = false;
+  }
+
+  function closeTicket(){
+    document.getElementById('ticket').classList.remove('show');
+    document.getElementById('ticket-scrim').classList.remove('show');
+    setTimeout(() => { scannerLocked = false; }, 200);
+  }
+
+  // ---------- Scanner ----------
+  let scannerLocked = false;
+
+  function onScanSuccess(decodedText){
+    if(scannerLocked) return;
+    if(!catalogReady){
+      statusText.textContent = "catálogo aún no cargado, espera…";
+      return;
+    }
+    scannerLocked = true;
+    if(navigator.vibrate) navigator.vibrate(60);
+    const sku = normalizeSku(decodedText);
+    const row = catalogIndex[sku];
+    showTicket(row, sku);
+  }
+
+  // Fuerza playsinline/muted en el <video> apenas se crea (crítico en iOS Safari,
+  // si no, el video puede intentar fullscreen nativo y la app se ve en blanco)
+  function watchVideoForIOS(){
+    const container = document.getElementById('reader');
+    if(!container) return;
+    const observer = new MutationObserver(() => {
+      const videoElem = container.querySelector('video');
+      if (videoElem) {
+        videoElem.setAttribute("playsinline", "true");
+        videoElem.setAttribute("webkit-playsinline", "true");
+        videoElem.muted = true;
+        videoElem.setAttribute("muted", "true");
+        videoElem.setAttribute("autoplay", "true");
+        observer.disconnect();
+      }
+    });
+    observer.observe(container, { childList: true, subtree: true });
+  }
+
+  function showTapToStartOverlay(retryFn){
+    if(document.getElementById('ios-tap-start')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'ios-tap-start';
+    overlay.innerHTML = `
+      <div>Toca para activar la cámara</div>
+      <button id="ios-tap-start-btn">Activar cámara</button>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('ios-tap-start-btn').addEventListener('click', async () => {
+      overlay.remove();
+      await retryFn();
+    }, { once: true });
+  }
+
+  async function startScanner(){
+    try {
+      if(typeof Html5Qrcode === 'undefined'){
+        throw new Error("La librería html5-qrcode no se cargó.");
+      }
+
+      html5QrCode = new Html5Qrcode("reader", {
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.QR_CODE
+        ],
+        verbose:false
+      });
+
+      watchVideoForIOS();
+
+      // Sin qrbox fijo: en iOS, si el contenedor aún no tiene alto real
+      // cuando arranca la cámara, un qrbox de tamaño fijo (280x160) hace
+      // que la librería falle en silencio. Escaneando el frame completo
+      // se elimina ese punto de falla.
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10 },
+        onScanSuccess,
+        () => {}
+      );
+
+    } catch (err) {
+      console.error(err);
+      showDebugError("No se pudo iniciar la cámara: " + err.message);
+      document.getElementById('camera-error').classList.add('show');
+      showTapToStartOverlay(startScanner);
+    }
+  }
+
+  loadCatalog();
+  startScanner();
+  setInterval(loadCatalog, 3 * 60 * 1000);
+</script>
+
+</body>
+</html>

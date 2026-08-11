@@ -747,7 +747,7 @@
     showTicket(row, sku);
   }
 
-  function startScanner(){
+  async function startScanner(){
     const html5QrCode = new Html5Qrcode("reader", {
       formatsToSupport: [
         Html5QrcodeSupportedFormats.EAN_13,
@@ -761,29 +761,67 @@
       verbose: false
     });
 
-    // Configuración optimizada específicamente para iOS Safari
-    const cameraConfig = { 
-      facingMode: "environment",
-      focusMode: "continuous"
-    };
-
     const qrScanConfig = { 
       fps: 15,
-      // Se elimina qrbox fijo o se establece dinámico para escanear todo el frame del video en WebKit
       experimentalFeatures: {
         useBarCodeDetectorIfSupported: true
       }
     };
 
-    html5QrCode.start(
-      cameraConfig,
-      qrScanConfig,
-      onScanSuccess,
-      () => {}
-    ).catch(err => {
-      console.error(err);
-      document.getElementById('camera-error').classList.add('show');
-    });
+    // Callback para asegurar 'playsinline' en iOS Safari cuando el elemento <video> es creado
+    const ensureVideoPlaysInline = () => {
+      const videoElem = document.querySelector("#reader video");
+      if (videoElem) {
+        videoElem.setAttribute("playsinline", "true");
+      }
+    };
+
+    try {
+      // Intento 1: Cámara trasera directa
+      await html5QrCode.start(
+        { facingMode: { exact: "environment" } },
+        qrScanConfig,
+        onScanSuccess,
+        () => {}
+      );
+      ensureVideoPlaysInline();
+    } catch (err1) {
+      try {
+        // Intento 2: Fallback para Safari (sin 'exact')
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          qrScanConfig,
+          onScanSuccess,
+          () => {}
+        );
+        ensureVideoPlaysInline();
+      } catch (err2) {
+        try {
+          // Intento 3: Consulta explícita de dispositivos (desencadena diálogo de permisos iOS)
+          const devices = await Html5Qrcode.getCameras();
+          if (devices && devices.length > 0) {
+            const backCam = devices.find(d => 
+              d.label.toLowerCase().includes('back') || 
+              d.label.toLowerCase().includes('trasera') || 
+              d.label.toLowerCase().includes('environment')
+            ) || devices[devices.length - 1];
+
+            await html5QrCode.start(
+              backCam.id,
+              qrScanConfig,
+              onScanSuccess,
+              () => {}
+            );
+            ensureVideoPlaysInline();
+          } else {
+            throw new Error("No camera devices found");
+          }
+        } catch (err3) {
+          console.error("Camera start failed:", err3);
+          document.getElementById('camera-error').classList.add('show');
+        }
+      }
+    }
   }
 
   loadCatalog();

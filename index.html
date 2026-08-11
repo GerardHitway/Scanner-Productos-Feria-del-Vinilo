@@ -491,7 +491,7 @@
       <div class="scanline"></div>
     </div>
   </div>
-  <div class="hint">Apunta al código de barras · toca para enfocar</div>
+  <div class="hint">Apunta al código de barras</div>
 
   <div id="camera-error">
     <p>No pudimos acceder a la cámara.<br>Revisa los permisos del navegador y vuelve a intentar.</p>
@@ -519,19 +519,11 @@
     }
     box.textContent += (box.textContent ? "\n---\n" : "") + msg;
   }
-  // html5-qrcode a veces lanza strings planos en vez de Error, por eso
-  // err.message puede venir undefined. Esta función siempre saca algo legible.
-  function errText(err){
-    if (!err) return "(error vacío)";
-    if (typeof err === "string") return err;
-    if (err.message) return err.message;
-    try { return JSON.stringify(err); } catch(e) { return String(err); }
-  }
   window.addEventListener('error', (e) => {
     showDebugError("JS ERROR: " + e.message + " (línea " + e.lineno + ")");
   });
   window.addEventListener('unhandledrejection', (e) => {
-    showDebugError("PROMISE ERROR: " + errText(e.reason));
+    showDebugError("PROMISE ERROR: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
   });
   // ==========================================
 
@@ -590,7 +582,7 @@
       statusText.textContent = "";
     }catch(err){
       console.error(err);
-      showDebugError("Error cargando catálogo: " + errText(err));
+      showDebugError("Error cargando catálogo: " + err.message);
       statusDot.className = "error";
       statusText.textContent = "error al cargar catálogo";
     }
@@ -782,10 +774,7 @@
   function closeTicket(){
     document.getElementById('ticket').classList.remove('show');
     document.getElementById('ticket-scrim').classList.remove('show');
-    setTimeout(() => {
-      scannerLocked = false;
-      triggerReFocus(); // iOS no reenfoca solo tras el primer escaneo: forzamos reenfoque
-    }, 200);
+    setTimeout(() => { scannerLocked = false; }, 200);
   }
 
   // ---------- Scanner ----------
@@ -802,21 +791,6 @@
     const sku = normalizeSku(decodedText);
     const row = catalogIndex[sku];
     showTicket(row, sku);
-  }
-
-  // iOS no reenfoca la cámara automáticamente después del primer código
-  // detectado, se queda "clavada" en esa distancia. Forzamos focusMode
-  // continuo cada vez que hace falta (tap manual o tras cerrar el ticket).
-  async function triggerReFocus() {
-    if (!html5QrCode) return;
-    try {
-      await html5QrCode.applyVideoConstraints({
-        advanced: [{ focusMode: "continuous" }]
-      });
-    } catch (e) {
-      // Algunos iPhones no exponen control de foco por software; se ignora.
-      console.log("Refocus no soportado:", e);
-    }
   }
 
   // Fuerza playsinline/muted en el <video> apenas se crea (crítico en iOS Safari,
@@ -874,39 +848,24 @@
 
       watchVideoForIOS();
 
-      // "ideal" es solo una sugerencia para el navegador, nunca falla duro
-      // (a diferencia de "exact"), así que un único intento alcanza.
+      // Sin qrbox fijo: en iOS, si el contenedor aún no tiene alto real
+      // cuando arranca la cámara, un qrbox de tamaño fijo (280x160) hace
+      // que la librería falle en silencio. Escaneando el frame completo
+      // se elimina ese punto de falla.
       await html5QrCode.start(
-        {
-          facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        },
+        { facingMode: "environment" },
         { fps: 10 },
         onScanSuccess,
         () => {}
       );
 
-      triggerReFocus(); // intento inicial de foco continuo
-
     } catch (err) {
       console.error(err);
-      showDebugError("No se pudo iniciar la cámara: " + errText(err));
+      showDebugError("No se pudo iniciar la cámara: " + err.message);
       document.getElementById('camera-error').classList.add('show');
       showTapToStartOverlay(startScanner);
     }
   }
-
-  // Toque en el visor = reenfoque manual (respaldo si el automático no alcanza)
-  document.getElementById('scanner-wrap').addEventListener('click', () => {
-    if (scannerLocked) return;
-    const hint = document.querySelector('.hint');
-    const prevText = hint.textContent;
-    hint.textContent = "Enfocando…";
-    triggerReFocus().finally(() => {
-      setTimeout(() => { hint.textContent = prevText; }, 800);
-    });
-  });
 
   loadCatalog();
   startScanner();

@@ -2339,223 +2339,200 @@ function showIOSStartOverlay(){
 
 async function startScanner(){
 
-  if(scannerStarting)
-    return;
+if(scannerStarting)
+return;
 
+scannerStarting = true;
 
-  scannerStarting =
-    true;
+try{
 
+```
+const errorBox =
+  document.getElementById('camera-error');
 
-  try{
+errorBox.classList.remove('show');
 
-    const errorBox =
-      document.getElementById(
-        'camera-error'
-      );
 
+if(typeof Html5Qrcode === 'undefined'){
 
-    errorBox.classList.remove(
-      'show'
-    );
-
-
-    if(
-      typeof Html5Qrcode ===
-      'undefined'
-    ){
-
-      throw new Error(
-        "La librería html5-qrcode no se cargó."
-      );
-
-    }
-
-
-    /*
-     * Limpiar scanner anterior.
-     */
-
-    if(html5QrCode){
-
-      try{
-
-        await html5QrCode.stop();
-
-      }catch(e){}
-
-      try{
-
-        html5QrCode.clear();
-
-      }catch(e){}
-
-    }
-
-
-    /*
-     * =====================================================
-     * CONFIGURACIÓN
-     * =====================================================
-     *
-     * IMPORTANTE:
-     *
-     * Android:
-     * BarcodeDetector queda habilitado como antes.
-     *
-     * iPhone:
-     * también puede utilizarlo si Safari lo soporta.
-     *
-     * No lo desactivamos porque la versión anterior
-     * demostró que el decodificador alternativo era
-     * demasiado lento.
-     */
-
-    html5QrCode =
-      new Html5Qrcode(
-        "reader",
-        {
-
-          verbose:false,
-
-          useBarCodeDetectorIfSupported:
-            true,
-
-          formatsToSupport:[
-
-            Html5QrcodeSupportedFormats.EAN_13,
-
-            Html5QrcodeSupportedFormats.EAN_8,
-
-            Html5QrcodeSupportedFormats.UPC_A,
-
-            Html5QrcodeSupportedFormats.UPC_E,
-
-            Html5QrcodeSupportedFormats.CODE_128,
-
-            Html5QrcodeSupportedFormats.CODE_39,
-
-            Html5QrcodeSupportedFormats.QR_CODE
-
-          ]
-
-        }
-      );
-
-
-    watchVideo();
-
-
-    /*
-     * =====================================================
-     * iPHONE
-     * =====================================================
-     *
-     * Safari necesita iniciar la cámara después de
-     * una interacción del usuario.
-     *
-     * Usamos facingMode environment.
-     *
-     * Sin qrbox fijo:
-     * dejamos que la librería analice todo el frame.
-     * Esto evita problemas cuando Safari cambia
-     * dinámicamente el tamaño del video.
-     */
-
-    if(isIOS){
-
-      await html5QrCode.start(
-
-        {
-          facingMode:{
-            ideal:"environment"
-          }
-        },
-
-        {
-          fps:15
-        },
-
-        onScanSuccess,
-
-        () => {}
-
-      );
-
-
-    }else{
-
-      /*
-       * =================================================
-       * ANDROID
-       * =================================================
-       *
-       * Se mantiene el comportamiento original:
-       * facingMode environment + 10 FPS.
-       */
-
-      await html5QrCode.start(
-
-        {
-          facingMode:"environment"
-        },
-
-        {
-          fps:10
-        },
-
-        onScanSuccess,
-
-        () => {}
-
-      );
-
-    }
-
-
-    scannerStarting =
-      false;
-
-
-  }catch(err){
-
-    console.error(err);
-
-
-    showDebugError(
-      "No se pudo iniciar la cámara: " +
-      (
-        err &&
-        err.message
-          ? err.message
-          : err
-      )
-    );
-
-
-    scannerStarting =
-      false;
-
-
-    document
-      .getElementById(
-        'camera-error'
-      )
-      .classList.add(
-        'show'
-      );
-
-
-    if(isIOS){
-
-      showIOSStartOverlay();
-
-    }
-
-  }
+  throw new Error(
+    "La librería html5-qrcode no se cargó."
+  );
 
 }
 
+
+/*
+ * Limpiar scanner anterior
+ */
+
+if(html5QrCode){
+
+  try{
+    await html5QrCode.stop();
+  }catch(e){}
+
+  try{
+    html5QrCode.clear();
+  }catch(e){}
+
+}
+
+
+/*
+ * Crear scanner
+ */
+
+html5QrCode =
+  new Html5Qrcode(
+    "reader",
+    {
+      verbose:false,
+
+      useBarCodeDetectorIfSupported:true,
+
+      formatsToSupport:[
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.QR_CODE
+      ]
+    }
+  );
+
+
+/*
+ * Observar el video para aplicar correctamente
+ * los atributos necesarios en Safari/iOS.
+ */
+
+watchVideo();
+
+
+/*
+ * =====================================================
+ * iPHONE / iOS
+ * =====================================================
+ *
+ * IMPORTANTE:
+ * Safari acepta facingMode como STRING.
+ *
+ * No usar:
+ *
+ * facingMode: {
+ *   ideal: "environment"
+ * }
+ *
+ * porque Safari/html5-qrcode puede rechazarlo.
+ */
+
+if(isIOS){
+
+  await html5QrCode.start(
+
+    "environment",
+
+    {
+      fps:15,
+
+      /*
+       * No usamos qrbox.
+       *
+       * Así Safari puede analizar el frame completo
+       * y evitamos que el código quede fuera de la zona
+       * de análisis.
+       */
+
+      aspectRatio:1.777778
+
+    },
+
+    onScanSuccess,
+
+    () => {}
+
+  );
+
+}else{
+
+  /*
+   * =================================================
+   * ANDROID
+   * =================================================
+   *
+   * Se mantiene separado para no afectar el flujo
+   * que ya funciona correctamente.
+   */
+
+  await html5QrCode.start(
+
+    {
+      facingMode:"environment"
+    },
+
+    {
+      fps:10
+    },
+
+    onScanSuccess,
+
+    () => {}
+
+  );
+
+}
+
+
+scannerStarting = false;
+
+
+statusDot.className = "ready";
+
+statusText.textContent =
+  isIOS
+    ? "cámara activa"
+    : "";
+```
+
+}catch(err){
+
+```
+console.error(err);
+
+
+showDebugError(
+  "No se pudo activar la cámara: " +
+  (
+    err &&
+    err.message
+      ? err.message
+      : err
+  )
+);
+
+
+scannerStarting = false;
+
+
+document
+  .getElementById('camera-error')
+  .classList.add('show');
+
+
+if(isIOS){
+
+  statusText.textContent =
+    "error cámara";
+
+}
+```
+
+}
+
+}
 
 /* =========================================================
    REINTENTAR
